@@ -137,10 +137,23 @@ module Atoms
     end
 
     def examples(name)
-      Atoms.lib_dir(name).glob("examples/*.{c,cc,cpp}").map do |p|
+      Atoms.lib_dir(name).glob("examples/*.{c,cc,cpp}").sort.map do |p|
         text = p.read
         brief = text[/@brief\s+(.+)/, 1]&.strip || p.basename.to_s
-        { name: p.basename.to_s, path: p.relative_path_from(Atoms::ROOT).to_s, brief: brief }
+        ext = p.extname.delete_prefix(".")
+        lang = case ext
+               when "c", "h" then "c"
+               when "cc", "cpp", "cxx" then "cpp"
+               else ext
+               end
+        {
+          name: p.basename.to_s,
+          stem: p.basename(p.extname).to_s,
+          path: p.relative_path_from(Atoms::ROOT).to_s,
+          brief: brief,
+          source: text,
+          lang: lang
+        }
       end
     end
   end

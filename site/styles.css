@@ -243,11 +243,134 @@ body:not(.has-toc) main {
     grid-template-columns: 1fr;
   }
 
-  .toc {
+  .toc,
+  .examples-nav {
     position: static;
     max-height: none;
     order: -1;
   }
+}
+
+/* ---- Examples browser ---- */
+
+.examples-page .content {
+  max-width: none;
+}
+
+.examples-nav {
+  position: sticky;
+  top: calc(var(--header-h) + 0.75rem);
+  max-height: calc(100vh - var(--header-h) - 1.5rem);
+  overflow: auto;
+  padding: 0.75rem 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 0.9rem;
+}
+
+.examples-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+.examples-list a {
+  display: block;
+  padding: 0.45rem 0.5rem;
+  margin: 0 -0.35rem 0.15rem;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--fg);
+}
+
+.examples-list a:hover,
+.examples-list li.is-active a {
+  background: var(--code-bg);
+}
+
+.examples-list code {
+  display: block;
+  background: transparent;
+  padding: 0;
+  color: var(--link);
+  font-size: 0.9em;
+}
+
+.examples-brief {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.examples-github {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.example-card {
+  margin: 1.5rem 0 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.example-card h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+}
+
+.example-card h2 a {
+  text-decoration: none;
+}
+
+.example-preview {
+  max-height: 14rem;
+  overflow: auto;
+  margin: 0.75rem 0;
+  border-radius: 8px;
+}
+
+.example-preview pre.highlight {
+  margin: 0;
+}
+
+.example-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+  margin: 0.5rem 0 0;
+}
+
+.example-actions .button {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  background: var(--link);
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+@media (prefers-color-scheme: dark) {
+  .example-actions .button {
+    color: #0a0a0a;
+  }
+}
+
+.example-meta {
+  margin: 0.25rem 0 1rem;
+}
+
+.example-source pre.highlight {
+  margin-top: 0.5rem;
+}
+
+.examples-summary {
+  margin: 0.5rem 0 0;
 }
 
 a {

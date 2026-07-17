@@ -32,24 +32,32 @@ module Atoms
         readme_path = Atoms.lib_dir(name).join("README.md")
         changelog_path = Atoms.lib_dir(name).join("CHANGELOG.md")
         readme_md = strip_license_section(readme_path.read)
+        examples = DocParse.examples(name).map do |ex|
+          ex.merge(
+            github_url: "#{Atoms::GITHUB}/blob/#{sha}/#{ex[:path]}",
+            page_url: "examples/#{ex[:stem]}.html"
+          )
+        end
         {
           name: name,
           version: Atoms.version(name),
           symbols: DocParse.parse_public(name),
-          examples: DocParse.examples(name),
+          examples: examples,
           readme: Markdown.to_html(readme_md),
           changelog: changelog_path.file? ? Markdown.to_html(changelog_path.read) : "",
           license_text: license_text,
           source_url: "#{Atoms::GITHUB}/tree/#{sha}/src/#{name}",
-          examples_url: "#{Atoms::GITHUB}/tree/#{sha}/src/#{name}/examples",
-          changelog_url: "#{Atoms::GITHUB}/blob/#{sha}/src/#{name}/CHANGELOG.md",
+          github_examples_url: "#{Atoms::GITHUB}/tree/#{sha}/src/#{name}/examples",
           download_url: "#{Atoms::GITHUB}/releases/download/#{name}-v#{Atoms.version(name)}/#{name}.h",
           public_url: "#{Atoms::GITHUB}/blob/#{sha}/src/#{name}/public.h"
         }
       end
 
       render_index(libs, sha_display)
-      libs.each { |lib| render_lib(lib, sha_display) }
+      libs.each do |lib|
+        render_lib(lib, sha_display)
+        render_examples_browser(lib, sha_display)
+      end
       Atoms::DOCS_OUT
     end
 
@@ -75,27 +83,42 @@ module Atoms
       CGI.escapeHTML(s.to_s)
     end
 
-    def layout(title, body, sha_display, root: true, scripts: [],
-               lib_name: nil, lib_version: nil)
+    # depth: 0 = site root, 1 = lib/, 2 = lib/examples/
+    def layout(title, body, sha_display, depth: 0, scripts: [],
+               lib_name: nil, lib_version: nil, lib_href: nil,
+               page_class: nil)
       collection = "#{Atoms::GITHUB}/tree/#{Atoms.git_sha}"
-      css_href = root ? "styles.css" : "../styles.css"
-      home_href = root ? "./" : "../"
-      script_prefix = root ? "" : "../"
-      footer_license = root ? "" : '· <a href="#license">license</a>'
+      prefix = depth.zero? ? "" : ("../" * depth)
+      css_href = "#{prefix}styles.css"
+      home_href = depth.zero? ? "./" : prefix
+      script_prefix = prefix
+      footer_license = if lib_name
+                         href = depth >= 2 ? "../#license" : "#license"
+                         "· <a href=\"#{h(href)}\">license</a>"
+                       else
+                         ""
+                       end
       script_tags = scripts.map { |s|
         %(<script src="#{h(script_prefix + s)}" defer></script>)
       }.join("\n  ")
 
+      lib_top = lib_href || (depth >= 2 ? "../" : "#top")
       crumb = if lib_name
                 <<~HTML.chomp
                   <span class="header-sep" aria-hidden="true">/</span>
-                        <a class="header-lib" href="#top">#{h(lib_name)} <span class="ver">v#{h(lib_version)}</span></a>
+                        <a class="header-lib" href="#{h(lib_top)}">#{h(lib_name)} <span class="ver">v#{h(lib_version)}</span></a>
                 HTML
               else
                 ""
               end
 
-      body_class = root ? "" : ' class="has-toc"'
+      body_attrs = []
+      body_attrs << %(id="top")
+      classes = []
+      classes << "has-toc" if page_class.to_s.include?("has-toc") || (lib_name && depth == 1 && page_class.nil?)
+      classes << page_class if page_class && page_class != "has-toc"
+      body_attrs << %(class="#{classes.join(' ')}") unless classes.empty?
+
       <<~HTML
         <!DOCTYPE html>
         <html lang="en">
@@ -106,7 +129,7 @@ module Atoms
           <link rel="stylesheet" href="#{h(css_href)}">
           #{script_tags}
         </head>
-        <body id="top"#{body_class}>
+        <body #{body_attrs.join(' ')}>
           <header class="site-header">
             <div class="site-header-inner">
               <a class="brand" href="#{h(home_href)}">atoms</a>
@@ -142,7 +165,7 @@ module Atoms
       end
       body << "</ul></main>"
       Atoms::DOCS_OUT.join("index.html").write(
-        layout("atoms", body, sha_display, root: true)
+        layout("atoms", body, sha_display, depth: 0)
       )
     end
 
@@ -152,7 +175,7 @@ module Atoms
       out << %(<h2 class="toc-title">On this page</h2>\n)
       out << %(<ul class="toc-sections">\n)
       out << %(<li><a href="#overview">Overview</a></li>\n)
-      out << %(<li><a href="#examples">Examples</a></li>\n)
+      out << %(<li><a href="examples/">Examples</a></li>\n)
       out << %(<li><a href="#api">API</a></li>\n)
       out << %(<li><a href="#changelog">Changelog</a></li>\n) unless lib[:changelog].empty?
       out << %(<li><a href="#license">License</a></li>\n)
@@ -185,6 +208,114 @@ module Atoms
       out
     end
 
+    def examples_sidebar(lib, active_stem: nil)
+      out = +%(<nav class="examples-nav" aria-label="Examples">\n)
+      out << %(<h2 class="toc-title">Examples</h2>\n)
+      out << %(<ul class="examples-list">\n)
+      index_active = active_stem.nil? ? " is-active" : ""
+      out << %(<li class="#{index_active.strip}"><a href="index.html">All examples</a></li>\n)
+      lib[:examples].each do |ex|
+        active = ex[:stem] == active_stem ? " is-active" : ""
+        out << %(<li class="#{active.strip}">)
+        out << %(<a href="#{h(ex[:stem])}.html"><code>#{h(ex[:name])}</code>)
+        out << %(<span class="examples-brief">#{h(ex[:brief])}</span></a></li>\n)
+      end
+      out << %(</ul>\n)
+      out << %(<p class="muted examples-github"><a href="#{h(lib[:github_examples_url])}">View on GitHub</a></p>\n)
+      out << %(</nav>\n)
+      out
+    end
+
+    def render_examples_browser(lib, sha_display)
+      ex_dir = Atoms::DOCS_OUT.join(lib[:name], "examples")
+      ex_dir.mkpath
+
+      # Index: gallery of all examples
+      cards = +""
+      lib[:examples].each do |ex|
+        cards << %(<article class="example-card">\n)
+        cards << %(<h2><a href="#{h(ex[:stem])}.html"><code>#{h(ex[:name])}</code></a></h2>\n)
+        cards << %(<p>#{h(ex[:brief])}</p>\n)
+        cards << %(<div class="example-preview">)
+        cards << Markdown.highlight(ex[:source], ex[:lang])
+        cards << %(</div>\n)
+        cards << %(<p class="example-actions">)
+        cards << %(<a class="button" href="#{h(ex[:stem])}.html">Open</a> )
+        cards << %(<a href="#{h(ex[:github_url])}">Source on GitHub</a>)
+        cards << %(</p>\n</article>\n)
+      end
+
+      if lib[:examples].empty?
+        cards = %(<p class="muted">No examples yet.</p>\n)
+      end
+
+      content = +""
+      content << %(<h1>Examples</h1>\n)
+      content << %(<p class="muted">Runnable samples for <code>#{h(lib[:name])}</code>. )
+      content << %(Build with <code>rake example:#{h(lib[:name])}</code>.</p>\n)
+      content << cards
+
+      body = +%(<div class="page examples-page">\n)
+      body << examples_sidebar(lib, active_stem: nil)
+      body << %(<main class="content">\n#{content}</main>\n</div>\n)
+
+      ex_dir.join("index.html").write(
+        layout(
+          "#{lib[:name]} examples",
+          body,
+          sha_display,
+          depth: 2,
+          lib_name: lib[:name],
+          lib_version: lib[:version],
+          lib_href: "../",
+          page_class: "has-examples-nav"
+        )
+      )
+
+      # One page per example
+      lib[:examples].each do |ex|
+        render_example_page(lib, ex, sha_display)
+      end
+    end
+
+    def render_example_page(lib, ex, sha_display)
+      ex_dir = Atoms::DOCS_OUT.join(lib[:name], "examples")
+
+      content = +""
+      content << %(<h1><code>#{h(ex[:name])}</code></h1>\n)
+      content << %(<p>#{h(ex[:brief])}</p>\n)
+      content << %(<p class="example-meta muted">)
+      content << %(<code>#{h(ex[:path])}</code> · )
+      content << %(<a href="#{h(ex[:github_url])}">GitHub</a>)
+      content << %(</p>\n)
+      content << %(<div class="example-source">)
+      content << Markdown.highlight(ex[:source], ex[:lang])
+      content << %(</div>\n)
+      content << %(<h2>Run</h2>\n)
+      content << %(<pre class="highlight"><code class="language-shell">)
+      content << h("rake example:#{lib[:name]}")
+      content << %(</code></pre>\n)
+      content << %(<p class="muted">Or compile against <code>dist/#{h(lib[:name])}.h</code> after )
+      content << %(<code>rake dist:#{h(lib[:name])}</code>.</p>\n)
+
+      body = +%(<div class="page examples-page">\n)
+      body << examples_sidebar(lib, active_stem: ex[:stem])
+      body << %(<main class="content">\n#{content}</main>\n</div>\n)
+
+      ex_dir.join("#{ex[:stem]}.html").write(
+        layout(
+          "#{ex[:name]} · #{lib[:name]}",
+          body,
+          sha_display,
+          depth: 2,
+          lib_name: lib[:name],
+          lib_version: lib[:version],
+          lib_href: "../",
+          page_class: "has-examples-nav"
+        )
+      )
+    end
+
     def render_lib(lib, sha_display)
       dir = Atoms::DOCS_OUT.join(lib[:name])
       dir.mkpath
@@ -193,7 +324,7 @@ module Atoms
       content << %(<h1>#{h(lib[:name])} <span class="ver">v#{h(lib[:version])}</span></h1>\n)
       content << %(<nav class="lib-nav">\n)
       content << %(<a href="#{h(lib[:source_url])}">Source</a>\n)
-      content << %(<a href="#{h(lib[:examples_url])}">Examples</a>\n)
+      content << %(<a href="examples/">Examples</a>\n)
       content << %(<a href="#api">API</a>\n)
       content << %(<a href="#changelog">Changelog</a>\n) unless lib[:changelog].empty?
       content << %(<a href="#{h(lib[:download_url])}">Download</a>\n)
@@ -202,10 +333,11 @@ module Atoms
 
       content << %(<section id="overview" class="overview markdown-body">#{lib[:readme]}</section>\n)
 
-      content << %(<section id="examples"><h2>Examples</h2><ul>\n)
+      content << %(<section id="examples"><h2>Examples</h2>\n)
+      content << %(<p><a href="examples/">Browse all examples →</a></p>\n)
+      content << %(<ul class="examples-summary">\n)
       lib[:examples].each do |ex|
-        url = "#{Atoms::GITHUB}/blob/#{Atoms.git_sha}/#{ex[:path]}"
-        content << %(<li><a href="#{h(url)}"><code>#{h(ex[:name])}</code></a> — #{h(ex[:brief])}</li>\n)
+        content << %(<li><a href="#{h(ex[:page_url])}"><code>#{h(ex[:name])}</code></a> — #{h(ex[:brief])}</li>\n)
       end
       content << %(</ul></section>\n)
 
@@ -250,10 +382,11 @@ module Atoms
           lib[:name],
           body,
           sha_display,
-          root: false,
+          depth: 1,
           scripts: ["toc.js"],
           lib_name: lib[:name],
-          lib_version: lib[:version]
+          lib_version: lib[:version],
+          page_class: "has-toc"
         )
       )
     end
