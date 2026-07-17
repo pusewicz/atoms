@@ -78,10 +78,10 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 - Always test the amalgamated header (`rake test` ⇒ `dist` first).
 - Core suites must not require SDL or network.
 - Prefer fixing code over weakening assertions.
-- CI matrix: Ubuntu (clang + gcc), macOS (clang), Windows (LLVM clang). All
-  legs install SDL3 when possible (apt / brew / official VC devel zip). On
-  Windows set `SDL3_DIR` to the unzipped devel tree if not using pkg-config.
-  Set `CC=gcc` / `CC=clang` locally. Windows needs a C23-capable clang (not MSVC).
+- CI matrix: Ubuntu (clang + gcc), macOS (clang), Windows (LLVM clang). SDL3
+  is installed via [libsdl-org/setup-sdl](https://github.com/libsdl-org/setup-sdl)
+  (`SDL3_DIR` = action `prefix`). Locally: pkg-config, or set `SDL3_DIR` /
+  `VCPKG_ROOT`. `CC=gcc` / `CC=clang`. Windows needs a C23-capable clang (not MSVC).
 
 ## Boundaries
 

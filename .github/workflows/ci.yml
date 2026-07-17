@@ -6,7 +6,7 @@ on:
   pull_request:
 
 env:
-  # Pin so Windows devel package URL stays stable.
+  # Pin SDL3 for reproducible CI (setup-sdl also accepts 3-latest).
   SDL3_VERSION: "3.4.12"
 
 jobs:
@@ -20,20 +20,16 @@ jobs:
           - name: ubuntu-clang
             os: ubuntu-latest
             cc: clang
-            sdl: true
           - name: ubuntu-gcc
             os: ubuntu-latest
             cc: gcc
-            sdl: true
           - name: macos-clang
             os: macos-latest
             cc: clang
-            sdl: true
           # C23 on Windows via LLVM clang (MSVC lacks full C23 / our GNU attrs).
           - name: windows-clang
             os: windows-latest
             cc: clang
-            sdl: true
 
     defaults:
       run:
@@ -47,6 +43,12 @@ jobs:
           ruby-version: "3.3"
           bundler-cache: true
 
+      - name: Install compilers (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang gcc pkg-config cmake ninja-build
+
       - name: Install LLVM (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -54,42 +56,35 @@ jobs:
           choco install llvm -y --no-progress
           "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      - name: Install SDL3 (Linux)
-        if: runner.os == 'Linux' && matrix.sdl
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libsdl3-dev pkg-config clang gcc
+      # Official action: build/install SDL from source (cached). Works on
+      # Linux/macOS/Windows. https://github.com/libsdl-org/setup-sdl
+      - name: Setup SDL3
+        id: sdl
+        uses: libsdl-org/setup-sdl@v1
+        with:
+          version: ${{ env.SDL3_VERSION }}
+          install-linux-dependencies: true
+          add-to-environment: true
+          build-type: Release
 
-      - name: Install SDL3 (macOS)
-        if: runner.os == 'macOS' && matrix.sdl
-        run: brew install sdl3 pkg-config
-
-      # Official VC devel package: headers + x64 import lib + DLL (works with
-      # clang targeting the MSVC ABI on windows-latest).
-      - name: Install SDL3 (Windows)
-        if: runner.os == 'Windows' && matrix.sdl
-        env:
-          VER: ${{ env.SDL3_VERSION }}
+      - name: Export SDL3_DIR for Rake
         run: |
-          set -euo pipefail
-          url="https://github.com/libsdl-org/SDL/releases/download/release-${VER}/SDL3-devel-${VER}-VC.zip"
-          curl -fsSL -o "$RUNNER_TEMP/sdl3-vc.zip" "$url"
-          mkdir -p "$RUNNER_TEMP/sdl3"
-          unzip -q "$RUNNER_TEMP/sdl3-vc.zip" -d "$RUNNER_TEMP/sdl3"
-          # Zip root is SDL3-<ver>/
-          prefix="$(find "$RUNNER_TEMP/sdl3" -maxdepth 1 -type d -name 'SDL3-*' | head -1)"
-          test -n "$prefix"
-          test -f "$prefix/include/SDL3/SDL.h" || test -f "$prefix/include/SDL3/SDL_log.h"
-          echo "SDL3_DIR=$prefix" >> "$GITHUB_ENV"
-          # Runtime DLL for test executables (VC layout keeps it under lib/x64)
-          if [[ -d "$prefix/lib/x64" ]]; then
-            echo "$prefix/lib/x64" >> "$GITHUB_PATH"
-          fi
-          if [[ -d "$prefix/lib" ]]; then
-            echo "$prefix/lib" >> "$GITHUB_PATH"
-          fi
-          ls -la "$prefix/include/SDL3" | head
-          ls -la "$prefix/lib/x64" 2>/dev/null || ls -la "$prefix/lib" | head
+          echo "SDL3_DIR=${{ steps.sdl.outputs.prefix }}" >> "$GITHUB_ENV"
+          echo "CMAKE_PREFIX_PATH=${{ steps.sdl.outputs.prefix }}" >> "$GITHUB_ENV"
+          # pkg-config lookup when the install laid down .pc files
+          for d in \
+            "${{ steps.sdl.outputs.prefix }}/lib/pkgconfig" \
+            "${{ steps.sdl.outputs.prefix }}/lib64/pkgconfig" \
+            "${{ steps.sdl.outputs.prefix }}/share/pkgconfig"
+          do
+            if [[ -d "$d" ]]; then
+              echo "PKG_CONFIG_PATH=${d}${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+              break
+            fi
+          done
+          echo "SDL version: ${{ steps.sdl.outputs.version }}"
+          echo "SDL prefix:  ${{ steps.sdl.outputs.prefix }}"
+          ls -la "${{ steps.sdl.outputs.prefix }}" || true
 
       - name: Show toolchain
         env:
@@ -99,7 +94,7 @@ jobs:
           command -v "$CC"
           "$CC" --version
           ruby -v
-          if [[ -n "${SDL3_DIR:-}" ]]; then echo "SDL3_DIR=$SDL3_DIR"; fi
+          echo "SDL3_DIR=${SDL3_DIR:-}"
           pkg-config --modversion sdl3 2>/dev/null || true
 
       - name: version:check

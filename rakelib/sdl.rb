@@ -3,7 +3,10 @@
 require "rbconfig"
 
 module Atoms
-  # Discover SDL3 for tests: pkg-config (Unix) or SDL3_DIR / VCPKG_ROOT (Windows).
+  # Discover SDL3 for tests:
+  #   1) pkg-config sdl3
+  #   2) SDL3_DIR / SDL3_ROOT (setup-sdl sets SDL3_DIR to its install prefix)
+  #   3) VCPKG_ROOT/installed/<triplet>
   module Sdl
     module_function
 
@@ -55,7 +58,6 @@ module Atoms
       root = ENV["VCPKG_ROOT"]
       return nil if root.nil? || root.empty?
 
-      # Common classic triplets
       %w[x64-windows x64-windows-static x86-windows].each do |trip|
         prefix = File.join(root, "installed", trip)
         cfg = from_prefix(prefix, "vcpkg:#{trip}")
@@ -65,27 +67,37 @@ module Atoms
     end
 
     def from_prefix(prefix, source)
+      # setup-sdl / CMake install: include/SDL3/*.h, lib{,64}/libSDL3.*
+      # Official VC zip: include/SDL3, lib/x64/SDL3.lib + SDL3.dll
       inc = File.join(prefix, "include")
       return nil unless File.directory?(inc)
       return nil unless File.exist?(File.join(inc, "SDL3", "SDL_log.h")) ||
                         File.exist?(File.join(inc, "SDL3", "SDL.h"))
 
-      lib_dir = %w[lib/x64 lib/x86 lib].map { |p| File.join(prefix, p) }
-                                       .find { |p| Dir.exist?(p) }
+      lib_dir = %w[lib/x64 lib/x86 lib64 lib].map { |p| File.join(prefix, p) }
+                                             .find { |p| Dir.exist?(p) && lib_dir_has_sdl3?(p) }
       return nil unless lib_dir
 
-      bin_dir = %w[lib/x64 lib/x86 bin].map { |p| File.join(prefix, p) }
-                                       .find { |p|
-                                         Dir.exist?(p) &&
-                                           Dir.glob(File.join(p, "SDL3*.dll")).any?
-                                       }
+      bin_dir = %w[lib/x64 lib/x86 bin lib64 lib].map { |p| File.join(prefix, p) }
+                                                 .find { |p| Dir.exist?(p) && runtime_dir?(p) }
 
       Config.new(
         cflags: ["-I#{inc}"],
         libs: ["-L#{lib_dir}", "-lSDL3"],
-        bin_dir: bin_dir,
+        bin_dir: bin_dir || lib_dir,
         source: source
       )
+    end
+
+    def lib_dir_has_sdl3?(dir)
+      Dir.glob(File.join(dir, "*SDL3*")).any? ||
+        Dir.glob(File.join(dir, "*sdl3*")).any?
+    end
+
+    def runtime_dir?(dir)
+      Dir.glob(File.join(dir, "SDL3*.dll")).any? ||
+        Dir.glob(File.join(dir, "libSDL3*.so*")).any? ||
+        Dir.glob(File.join(dir, "libSDL3*.dylib")).any?
     end
 
     def prepend_bin_to_path!
@@ -94,6 +106,16 @@ module Atoms
 
       sep = File::PATH_SEPARATOR
       ENV["PATH"] = "#{dir}#{sep}#{ENV.fetch('PATH', '')}"
+
+      # Unix: ensure the dynamic linker can find libSDL3 when not using rpath.
+      case RbConfig::CONFIG["host_os"]
+      when /darwin/i
+        ENV["DYLD_LIBRARY_PATH"] =
+          "#{dir}#{sep}#{ENV.fetch('DYLD_LIBRARY_PATH', '')}"
+      when /linux/i
+        ENV["LD_LIBRARY_PATH"] =
+          "#{dir}#{sep}#{ENV.fetch('LD_LIBRARY_PATH', '')}"
+      end
     end
   end
 end
