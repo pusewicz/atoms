@@ -7,6 +7,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-18
 ### Added
 
 - SDL backend example (`examples/hello_sdl.c`); `rake example:atom_log` builds
