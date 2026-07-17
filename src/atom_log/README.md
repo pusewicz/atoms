@@ -44,7 +44,14 @@ Full reference is generated into the docs site from comments on `public.h`.
 
 ## Examples
 
-See [`examples/`](examples/).
+| File | Notes |
+|------|--------|
+| [`examples/hello.c`](examples/hello.c) | Core API, no dependencies |
+| [`examples/hello_sdl.c`](examples/hello_sdl.c) | `ATOM_LOG_SDL` + native `SDL_Log` (needs SDL3) |
+
+```bash
+rake example:atom_log   # builds all; skips *_sdl if SDL3 is missing
+```
 
 ## Develop
 

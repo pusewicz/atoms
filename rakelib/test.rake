@@ -112,11 +112,30 @@ end
 
 namespace :example do
   Atoms.libs.each do |name|
-    desc "Build and run examples for #{name}"
+    desc "Build and run examples for #{name} (SDL examples need SDL3)"
     task name => "dist:#{name}" do
-      Atoms.lib_dir(name).glob("examples/*.c").each do |src|
+      Atoms.lib_dir(name).glob("examples/*.c").sort.each do |src|
         bin = Atoms::BUILD.join("example_#{name}_#{src.basename('.c')}#{exe_suffix}")
-        compile_and_link(src, bin)
+        sdl_example = src.basename(".*").to_s.end_with?("_sdl")
+
+        if sdl_example
+          unless sdl_available?
+            warn "skip example #{src.basename} (SDL3 not available)"
+            next
+          end
+
+          cfg = Atoms::Sdl.config
+          puts "SDL3 via #{cfg.source} (#{src.basename})"
+          Atoms::Sdl.prepend_bin_to_path!
+          compile_and_link(
+            src,
+            bin,
+            extra_cflags: ["-DATOM_LOG_SDL", *cfg.cflags],
+            extra_ldflags: cfg.libs
+          )
+        else
+          compile_and_link(src, bin)
+        end
         run_bin(bin)
       end
     end
