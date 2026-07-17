@@ -11,12 +11,21 @@ module Atoms
   module DocRender
     module_function
 
+    KIND_ORDER = %i[enum typedef function macro].freeze
+    KIND_LABEL = {
+      enum: "Enums",
+      typedef: "Types",
+      function: "Functions",
+      macro: "Macros"
+    }.freeze
+
     def build_all
       sha = Atoms.git_sha
       sha_display = Atoms.git_dirty? ? "#{sha}-dirty" : sha
       Atoms::DOCS_OUT.mkpath
 
       write_styles!
+      write_scripts!
       license_text = Atoms::ROOT.join("LICENSE").read
 
       libs = Atoms.libs.map do |name|
@@ -44,7 +53,6 @@ module Atoms
       Atoms::DOCS_OUT
     end
 
-    # License is rendered as embedded full text; drop any README ## License section.
     def strip_license_section(md)
       md.sub(/\n##[ \t]+License\b.*\z/m, "\n")
     end
@@ -58,21 +66,26 @@ module Atoms
       Atoms::DOCS_OUT.join("styles.css").write(css)
     end
 
+    def write_scripts!
+      toc_js = Atoms::SITE.join("toc.js")
+      FileUtils.cp(toc_js, Atoms::DOCS_OUT.join("toc.js")) if toc_js.file?
+    end
+
     def h(s)
       CGI.escapeHTML(s.to_s)
     end
 
-    def layout(title, body, sha_display, root: true)
+    def layout(title, body, sha_display, root: true, scripts: [])
       collection = "#{Atoms::GITHUB}/tree/#{Atoms.git_sha}"
       css_href = root ? "styles.css" : "../styles.css"
       home_href = root ? "./" : "../"
-      # On lib pages the license is embedded; on the index point at the first lib.
-      license_href = root ? nil : "#license"
-      footer_license = if license_href
-                         "· <a href=\"#{h(license_href)}\">license</a>"
-                       else
-                         ""
-                       end
+      script_prefix = root ? "" : "../"
+      footer_license = root ? "" : '· <a href="#license">license</a>'
+      script_tags = scripts.map { |s|
+        %(<script src="#{h(script_prefix + s)}" defer></script>)
+      }.join("\n  ")
+
+      body_class = root ? "" : ' class="has-toc"'
       <<~HTML
         <!DOCTYPE html>
         <html lang="en">
@@ -81,14 +94,13 @@ module Atoms
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <title>#{h(title)}</title>
           <link rel="stylesheet" href="#{h(css_href)}">
+          #{script_tags}
         </head>
-        <body>
+        <body#{body_class}>
           <header class="site-header">
             <a class="brand" href="#{h(home_href)}">atoms</a>
           </header>
-          <main>
-            #{body}
-          </main>
+          #{body}
           <footer class="site-footer">
             <p>Docs built from commit <code>#{h(sha_display)}</code>
               · <a href="#{h(collection)}">source</a>
@@ -109,72 +121,119 @@ module Atoms
     end
 
     def render_index(libs, sha_display)
-      body = +"<h1>atoms</h1><p>Single-header C23 libraries.</p><ul class=\"catalog\">"
+      body = +"<main><h1>atoms</h1><p>Single-header C23 libraries.</p><ul class=\"catalog\">"
       libs.each do |lib|
         body << "<li><a href=\"#{h(lib[:name])}/\"><strong>#{h(lib[:name])}</strong></a> "
         body << "<span class=\"ver\">v#{h(lib[:version])}</span> "
         body << "— <a href=\"#{h(lib[:source_url])}\">source</a></li>"
       end
-      body << "</ul>"
+      body << "</ul></main>"
       Atoms::DOCS_OUT.join("index.html").write(
         layout("atoms", body, sha_display, root: true)
       )
     end
 
+    def toc_html(lib)
+      symbols = lib[:symbols]
+      out = +%(<nav class="toc" data-toc aria-label="Table of contents">\n)
+      out << %(<h2 class="toc-title">On this page</h2>\n)
+      out << %(<ul class="toc-sections">\n)
+      out << %(<li><a href="#overview">Overview</a></li>\n)
+      out << %(<li><a href="#examples">Examples</a></li>\n)
+      out << %(<li><a href="#api">API</a></li>\n)
+      out << %(<li><a href="#changelog">Changelog</a></li>\n) unless lib[:changelog].empty?
+      out << %(<li><a href="#license">License</a></li>\n)
+      out << %(</ul>\n)
+
+      out << %(<div class="toc-api">\n)
+      out << %(<h3 class="toc-subtitle">API</h3>\n)
+      out << %(<label class="toc-filter-label" for="toc-filter">Filter</label>\n)
+      out << %(<input id="toc-filter" class="toc-filter" type="search" )
+      out << %(data-toc-filter placeholder="Filter symbols…" )
+      out << %(autocomplete="off" spellcheck="false">\n)
+      out << %(<p class="toc-empty" data-toc-empty hidden>No matches</p>\n)
+
+      KIND_ORDER.each do |kind|
+        group = symbols.select { |s| s.kind == kind }
+        next if group.empty?
+
+        out << %(<div class="toc-group" data-toc-group data-kind="#{h(kind)}">\n)
+        out << %(<h4 class="toc-kind">#{h(KIND_LABEL[kind])}</h4>\n)
+        out << %(<ul class="toc-symbols">\n)
+        group.each do |sym|
+          out << %(<li data-toc-item data-toc-name="#{h(sym.name)}" )
+          out << %(data-toc-kind="#{h(sym.kind)}">)
+          out << %(<a href="##{h(sym.name)}"><code>#{h(sym.name)}</code>)
+          out << %(<span class="toc-kind-tag">#{h(sym.kind)}</span></a></li>\n)
+        end
+        out << %(</ul>\n</div>\n)
+      end
+      out << %(</div>\n</nav>\n)
+      out
+    end
+
     def render_lib(lib, sha_display)
       dir = Atoms::DOCS_OUT.join(lib[:name])
       dir.mkpath
-      body = +""
-      body << "<h1>#{h(lib[:name])} <span class=\"ver\">v#{h(lib[:version])}</span></h1>"
-      body << "<nav class=\"lib-nav\">"
-      body << "<a href=\"#{h(lib[:source_url])}\">Source</a>"
-      body << "<a href=\"#{h(lib[:examples_url])}\">Examples</a>"
-      body << "<a href=\"#changelog\">Changelog</a>"
-      body << "<a href=\"#{h(lib[:download_url])}\">Download</a>"
-      body << "<a href=\"#license\">License</a>"
-      body << "</nav>"
 
-      body << "<section class=\"overview markdown-body\">#{lib[:readme]}</section>"
+      content = +""
+      content << %(<h1>#{h(lib[:name])} <span class="ver">v#{h(lib[:version])}</span></h1>\n)
+      content << %(<nav class="lib-nav">\n)
+      content << %(<a href="#{h(lib[:source_url])}">Source</a>\n)
+      content << %(<a href="#{h(lib[:examples_url])}">Examples</a>\n)
+      content << %(<a href="#api">API</a>\n)
+      content << %(<a href="#changelog">Changelog</a>\n) unless lib[:changelog].empty?
+      content << %(<a href="#{h(lib[:download_url])}">Download</a>\n)
+      content << %(<a href="#license">License</a>\n)
+      content << %(</nav>\n)
 
-      body << "<section id=\"examples\"><h2>Examples</h2><ul>"
+      content << %(<section id="overview" class="overview markdown-body">#{lib[:readme]}</section>\n)
+
+      content << %(<section id="examples"><h2>Examples</h2><ul>\n)
       lib[:examples].each do |ex|
         url = "#{Atoms::GITHUB}/blob/#{Atoms.git_sha}/#{ex[:path]}"
-        body << "<li><a href=\"#{h(url)}\"><code>#{h(ex[:name])}</code></a> — #{h(ex[:brief])}</li>"
+        content << %(<li><a href="#{h(url)}"><code>#{h(ex[:name])}</code></a> — #{h(ex[:brief])}</li>\n)
       end
-      body << "</ul></section>"
+      content << %(</ul></section>\n)
 
-      body << "<section id=\"api\"><h2>API</h2>"
-      body << "<p class=\"muted\">Parsed from <a href=\"#{h(lib[:public_url])}\">public.h</a>.</p>"
+      content << %(<section id="api"><h2>API</h2>\n)
+      content << %(<p class="muted">Parsed from <a href="#{h(lib[:public_url])}">public.h</a>.</p>\n)
       lib[:symbols].each do |sym|
-        body << "<article class=\"symbol\" id=\"#{h(sym.name)}\">"
-        body << "<h3><code>#{h(sym.name)}</code> <span class=\"kind\">#{h(sym.kind)}</span></h3>"
-        body << Markdown.highlight_c(sym.signature)
-        body << "<p>#{h(sym.brief)}</p>" if sym.brief && !sym.brief.empty?
+        content << %(<article class="symbol" id="#{h(sym.name)}" data-kind="#{h(sym.kind)}">\n)
+        content << %(<h3><code>#{h(sym.name)}</code> <span class="kind">#{h(sym.kind)}</span></h3>\n)
+        content << Markdown.highlight_c(sym.signature)
+        content << %(<p>#{h(sym.brief)}</p>\n) if sym.brief && !sym.brief.empty?
         if sym.params && !sym.params.empty?
-          body << "<dl class=\"params\">"
+          content << %(<dl class="params">\n)
           sym.params.each do |n, d|
-            body << "<dt><code>#{h(n)}</code></dt><dd>#{h(d)}</dd>"
+            content << %(<dt><code>#{h(n)}</code></dt><dd>#{h(d)}</dd>\n)
           end
-          body << "</dl>"
+          content << %(</dl>\n)
         end
         if sym.returns
-          body << "<p class=\"returns\"><strong>Returns:</strong> #{h(sym.returns)}</p>"
+          content << %(<p class="returns"><strong>Returns:</strong> #{h(sym.returns)}</p>\n)
         end
-        body << "</article>"
+        content << %(</article>\n)
       end
-      body << "</section>"
+      content << %(</section>\n)
 
       unless lib[:changelog].empty?
-        body << "<section id=\"changelog\" class=\"markdown-body\">"
-        body << "<h2>Changelog</h2>"
-        body << lib[:changelog]
-        body << "</section>"
+        content << %(<section id="changelog" class="markdown-body">\n)
+        content << %(<h2>Changelog</h2>\n)
+        content << lib[:changelog]
+        content << %(</section>\n)
       end
 
-      body << license_section(lib[:license_text])
+      content << license_section(lib[:license_text])
+
+      body = +%(<div class="page">\n)
+      body << toc_html(lib)
+      body << %(<main class="content">\n)
+      body << content
+      body << %(</main>\n</div>\n)
 
       dir.join("index.html").write(
-        layout(lib[:name], body, sha_display, root: false)
+        layout(lib[:name], body, sha_display, root: false, scripts: ["toc.js"])
       )
     end
   end

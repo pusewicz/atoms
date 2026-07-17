@@ -11,7 +11,8 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 - `rake dist` / `rake dist:atom_log` — amalgamate headers into `dist/`
 - `rake test` / `rake test:atom_log` / `rake test:atom_log:sdl`
 - `rake example:atom_log` — build and run examples
-- `rake docs` / `rake docs:check` / `rake docs:serve`
+- `rake docs` / `rake docs:check` — build / verify static docs
+- `rake docs:serve` — build then serve at http://127.0.0.1:4000 (`PORT=…` to override)
 - `rake version` / `rake version:check` / `rake version:atom_log:bump[patch]`
 - `rake release:atom_log` — promote changelog (VERSION unchanged)
 - `rake release:atom_log:bump_next` — VERSION += patch after tagging

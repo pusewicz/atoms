@@ -4,7 +4,8 @@ require_relative "atoms"
 
 module Atoms
   module DocParse
-    Symbol = Struct.new(:kind, :name, :signature, :brief, :params, :returns, :line, keyword_init: true)
+    Symbol = Struct.new(:kind, :name, :signature, :brief, :params, :returns,
+                        :line, keyword_init: true)
 
     module_function
 
@@ -22,21 +23,27 @@ module Atoms
           decl, i = read_declaration(lines, i)
           next if decl.strip.empty?
 
-          brief = comment[/@brief\s+(.+)/, 1]&.strip
-          brief ||= comment.lines.map(&:strip).reject { |l| l.start_with?("*") && l =~ /@/ }
-                              .join(" ").gsub(/\A\*+\s*/, "").strip
-          brief = brief.sub(/\A\*+\s*/, "").split("*").first.to_s.strip if brief
+          brief = comment[/@brief\s+(.+?)(?:\s*\*+\/)?\s*$/, 1]&.strip
+          brief = brief&.sub(%r{\s*\*/\s*\z}, "")&.strip
+          if brief.nil? || brief.empty?
+            brief = comment.lines.map(&:strip)
+                           .reject { |l| l.include?("@") || l == "/**" || l == "*/" }
+                           .map { |l| l.sub(%r{\A\*+\s*}, "").sub(%r{\s*\*/\s*\z}, "") }
+                           .reject(&:empty?)
+                           .join(" ")
+                           .strip
+          end
 
           params = comment.scan(/@param\s+(\S+)\s+(.+)/).map { |n, d| [n, d.strip] }
           returns = comment[/@return\s+(.+)/, 1]&.strip
 
           kind, sym_name = classify(decl)
-          next unless kind
+          next unless kind && sym_name
 
           symbols << Symbol.new(
             kind: kind,
             name: sym_name,
-            signature: decl.gsub(/\s+/, " ").strip,
+            signature: normalize_sig(decl),
             brief: brief,
             params: params,
             returns: returns,
@@ -61,20 +68,37 @@ module Atoms
     end
 
     def read_declaration(lines, i)
-      # skip empty / cpp lines
-      while i < lines.size && (lines[i].strip.empty? || lines[i] =~ /\A\s*#/)
-        return ["", i + 1] if lines[i] =~ /\A\s*#\s*if/
-        i += 1 if lines[i].strip.empty? || lines[i] =~ /\A\s*#\s*(define|if|endif|else|elif|include)/
-        break unless lines[i]&.strip&.empty? || lines[i] =~ /\A\s*#/
+      while i < lines.size && lines[i].strip.empty?
+        i += 1
       end
       return ["", i] if i >= lines.size
 
-      buf = +lines[i]
-      # multi-line decl until ; or { or macro end
-      if lines[i] =~ /\A\s*#\s*define/
-        return [lines[i].strip, i + 1]
+      # Object-like / function-like macros (may continue with \).
+      if lines[i] =~ /\A\s*#\s*define\s+\w/
+        buf = lines[i].rstrip
+        while buf.end_with?("\\") && i + 1 < lines.size
+          i += 1
+          buf = "#{buf.chomp('\\')} #{lines[i].strip}"
+        end
+        return [buf, i + 1]
       end
-      while i < lines.size && !buf.include?(";") && !buf.include?("{")
+
+      # Skip other preprocessor directives (includes, guards, ifdef, …).
+      return ["", i + 1] if lines[i] =~ /\A\s*#/
+
+      buf = +lines[i]
+      # typedef enum … { … } Name;  — read until closing `};` or `;` after `}`
+      if buf =~ /enum\b/
+        while i < lines.size && !buf.match?(/}\s*\w*\s*;/)
+          i += 1
+          break if i >= lines.size
+
+          buf << lines[i]
+        end
+        return [buf.strip, i + 1]
+      end
+
+      while i < lines.size && !buf.include?(";")
         i += 1
         break if i >= lines.size
 
@@ -85,22 +109,31 @@ module Atoms
 
     def classify(decl)
       if decl =~ /\A\s*#\s*define\s+(\w+)/
-        [:macro, $1]
-      elsif decl =~ /typedef\s+enum/
-        name = decl[/}\s*(\w+)/, 1]
-        [:enum, name || "enum"]
-      elsif decl =~ /typedef\s+.*\(\s*\*\s*(\w+)\s*\)/
-        [:typedef, $1]
-      elsif decl =~ /\b(\w+)\s*\(/
-        # function — last identifier before (
-        if decl =~ /\b([a-zA-Z_]\w*)\s*\(/
-          name = decl.scan(/\b([a-zA-Z_]\w*)\s*\(/).flatten.last
-          return [:function, name] if name && !%w[if for while switch].include?(name)
-        end
-        nil
-      else
-        nil
+        return [:macro, Regexp.last_match(1)]
       end
+
+      if decl =~ /typedef\s+enum(?:\s+(\w+))?/
+        tag = Regexp.last_match(1)
+        name = decl[/}\s*(\w+)\s*;/m, 1] || tag
+        return [:enum, name] if name
+      end
+
+      if decl =~ /typedef\s+.*\(\s*\*\s*(\w+)\s*\)/
+        return [:typedef, Regexp.last_match(1)]
+      end
+
+      # Function declarator: last identifier immediately before '('.
+      names = decl.scan(/\b([A-Za-z_]\w*)\s*\(/).flatten
+      names.reject! { |n| %w[if for while switch sizeof _Generic typeof].include?(n) }
+      # Drop attribute tokens like gnu, format, printf inside [[…]]
+      names.reject! { |n| %w[gnu format printf noreturn].include?(n) }
+      return [:function, names.last] if names.last
+
+      nil
+    end
+
+    def normalize_sig(decl)
+      decl.gsub(/\s+/, " ").strip
     end
 
     def examples(name)

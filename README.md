@@ -48,6 +48,7 @@ int main(void) {
 bundle install     # rake, commonmarker (GFM), rouge
 bundle exec rake test          # amalgamate + run suites
 bundle exec rake docs          # GFM markdown + Rouge-highlighted static docs
+bundle exec rake docs:serve    # build + serve at http://127.0.0.1:4000
 bundle exec rake version:check
 ```
 

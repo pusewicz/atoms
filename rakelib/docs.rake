@@ -29,13 +29,33 @@ namespace :docs do
     Rake::Task[:docs].invoke
   end
 
-  desc "Serve build/docs on http://127.0.0.1:4000"
+  desc "Build docs and serve on http://127.0.0.1:PORT (default 4000; PORT=…)"
   task serve: :docs do
     require "webrick"
+
+    port = Integer(ENV.fetch("PORT", "4000"))
+    host = ENV.fetch("HOST", "127.0.0.1")
     root = Atoms::DOCS_OUT.to_s
-    server = WEBrick::HTTPServer.new(Port: 4000, DocumentRoot: root)
-    trap("INT") { server.shutdown }
-    puts "serving #{root} on http://127.0.0.1:4000"
+
+    server = WEBrick::HTTPServer.new(
+      Port: port,
+      BindAddress: host,
+      DocumentRoot: root,
+      AccessLog: [],
+      Logger: WEBrick::Log.new($stderr, WEBrick::Log::INFO)
+    )
+
+    shut = proc {
+      puts "\nstopping docs server…"
+      server.shutdown
+    }
+    trap("INT", &shut)
+    trap("TERM", &shut)
+
+    url = "http://#{host}:#{port}/"
+    puts "serving #{Atoms::DOCS_OUT.relative_path_from(Atoms::ROOT)} at #{url}"
+    puts "  atom_log → #{url}atom_log/"
+    puts "  Ctrl-C to stop"
     server.start
   end
 end
