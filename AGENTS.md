@@ -66,12 +66,11 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 
 ## Documentation
 
-- API docs generated from `public.h` comments → `rake docs`.
-- Markdown via **commonmarker** (cmark-gfm / GitHub extensions) and **Rouge**
-  for fenced-code + API signature highlighting (`Gemfile`; `bundle install`).
-- Examples in `src/<lib>/examples/`; docs list and link all of them.
+- API docs generated from `public.h` comments → `rake docs` (local / release only).
+- Markdown via **commonmarker** (cmark-gfm) and **Rouge** (`Gemfile`).
+- Examples in `src/<lib>/examples/`; docs must list and link all of them.
 - Generated docs link back to repo resources at the build commit SHA.
-- `rake docs:check`: public symbols documented; ≥1 example per lib.
+- **Do not** build or deploy docs from PR/`main` CI — only `release.yml` on tags.
 
 ## Testing
 
