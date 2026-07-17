@@ -2,6 +2,7 @@
 
 require "shellwords"
 require "rbconfig"
+require "tempfile"
 
 module Atoms
   module CFlags
@@ -9,8 +10,8 @@ module Atoms
 
     # Shared first-party flags. Pedantic + Werror for tests/examples.
     # third_party is -isystem so pico_unit stays quiet.
+    # -std is filled in by #default (c23, or c2x on older GCC).
     BASE = %w[
-      -std=c23
       -Wall
       -Wextra
       -Wpedantic
@@ -47,8 +48,38 @@ module Atoms
       RbConfig::CONFIG["host_os"].match?(/mswin|mingw|cygwin/i)
     end
 
+    # Prefer -std=c23; fall back to -std=c2x for GCC 11–13 (and similar).
+    def c_std_flag
+      @c_std_flag ||= begin
+        if flag_accepted?("-std=c23")
+          "-std=c23"
+        elsif flag_accepted?("-std=c2x")
+          warn "#{cc_name}: using -std=c2x (this compiler has no -std=c23)"
+          "-std=c2x"
+        else
+          raise "#{cc_name}: supports neither -std=c23 nor -std=c2x"
+        end
+      end
+    end
+
+    def flag_accepted?(flag)
+      Tempfile.create(["atoms_cflag", ".c"]) do |f|
+        f.write("int main(void) { return 0; }\n")
+        f.flush
+        out = File.join(Dir.tmpdir, "atoms_cflag_probe#{Process.pid}.o")
+        begin
+          system(
+            cc_name, flag, "-c", f.path, "-o", out,
+            out: File::NULL, err: File::NULL
+          )
+        ensure
+          File.delete(out) if File.exist?(out)
+        end
+      end
+    end
+
     def default
-      flags = BASE.dup
+      flags = [c_std_flag, *BASE]
       flags.concat(CLANG_ONLY) if clangish?
       # MSVC headers are noisy under -Wconversion when using clang targeting
       # the MSVC ABI; keep pedantic/error but drop conversion on Windows.

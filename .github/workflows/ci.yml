@@ -22,7 +22,8 @@ jobs:
             cc: clang
           - name: ubuntu-gcc
             os: ubuntu-latest
-            cc: gcc
+            # GCC 14+ understands -std=c23; older GCC needs -std=c2x (probed in rake).
+            cc: gcc-14
           - name: macos-clang
             os: macos-latest
             cc: clang
@@ -47,7 +48,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang gcc pkg-config cmake ninja-build
+          sudo apt-get install -y clang gcc-14 pkg-config cmake ninja-build
 
       - name: Install LLVM (Windows)
         if: runner.os == 'Windows'
