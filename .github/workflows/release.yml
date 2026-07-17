@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "atom_log-v*"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+      - name: Install SDL3
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl3-dev pkg-config
+      - name: Parse tag
+        id: meta
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          LIB="${TAG%-v*}"
+          VER="${TAG##*-v}"
+          FILE_VER=$(tr -d '[:space:]' < "src/${LIB}/VERSION")
+          if [ "$VER" != "$FILE_VER" ]; then
+            echo "Tag version $VER != VERSION file $FILE_VER"
+            exit 1
+          fi
+          echo "lib=$LIB" >> "$GITHUB_OUTPUT"
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+      - name: Build dist
+        run: rake "dist:${{ steps.meta.outputs.lib }}"
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/${{ steps.meta.outputs.lib }}.h
+          generate_release_notes: true
+      - name: Build docs
+        run: rake docs
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/docs
+      - name: Deploy pages
+        uses: actions/deploy-pages@v4

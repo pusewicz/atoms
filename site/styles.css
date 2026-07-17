@@ -1,0 +1,145 @@
+:root {
+  --bg: #faf9f7;
+  --fg: #1a1a1a;
+  --muted: #5c5c5c;
+  --border: #e4e1db;
+  --code-bg: #f0eeea;
+  --link: #0b5fff;
+  --max: 42rem;
+  --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121212;
+    --fg: #ececec;
+    --muted: #a0a0a0;
+    --border: #2a2a2a;
+    --code-bg: #1c1c1c;
+    --link: #7eb6ff;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.55;
+}
+
+.site-header,
+main,
+.site-footer {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem;
+}
+
+.site-header {
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  font-weight: 650;
+  text-decoration: none;
+  color: var(--fg);
+  letter-spacing: -0.02em;
+}
+
+a {
+  color: var(--link);
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.ver {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.85em;
+}
+
+.lib-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin: 1rem 0 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.catalog {
+  list-style: none;
+  padding: 0;
+}
+
+.catalog li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+code,
+pre {
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+
+pre {
+  background: var(--code-bg);
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  border-radius: 6px;
+}
+
+.sig {
+  margin: 0.35rem 0 0.75rem;
+}
+
+.symbol {
+  margin: 1.75rem 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.kind {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.params {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+}
+
+.params dt {
+  margin: 0;
+}
+
+.params dd {
+  margin: 0;
+  color: var(--muted);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
