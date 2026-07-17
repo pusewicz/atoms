@@ -15,8 +15,8 @@ typedef enum AtomLogPrio : int {
   ATOM_LOG_PRIO_UNKNOWN
 } AtomLogPrio;
 
-/* static const (not constexpr): older Clang/GCC accept -std=c23 but lack
- * C23 constexpr objects. */
+/* static const rather than constexpr: some compilers accept -std=c23 without
+ * supporting C23 constexpr objects. */
 static const int atom_log_loc_width = 32;
 
 static const char* atom_log__level_tag(AtomLogPrio prio) {
@@ -113,7 +113,8 @@ static AtomLogPrio atom_log__prio_from_level(AtomLogLevel level) {
 }
 #endif
 
-/// Write one column-aligned line to the active output.
+/* Write one column-aligned "time  tag  location  message" line to the active
+ * output. */
 static void atom_log__write_line(bool color, AtomLogPrio prio, const char* loc,
                                  const char* text, AtomLogOutputFn out_fn,
                                  void* out_ud) {
@@ -137,9 +138,9 @@ static void atom_log__write_line(bool color, AtomLogPrio prio, const char* loc,
   const char* reset = "";
 #endif
 
-  const int loc_pad = (int)strlen(location);
+  const int loc_len = (int)strlen(location);
   const int loc_field =
-      loc_pad < atom_log_loc_width ? atom_log_loc_width : loc_pad;
+      loc_len < atom_log_loc_width ? atom_log_loc_width : loc_len;
 
   snprintf(line, sizeof line, "%s%s%s  %s%s%s  %s%-*s%s  %s\n", dim, time_buf,
            reset, cseq, tag, reset, dim, loc_field, location, reset, msg);

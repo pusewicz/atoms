@@ -182,7 +182,7 @@ TEST_CASE(test_log_level_tags) {
       {ATOM_LOG_ERROR, "ERR "},
   };
 
-  for (size_t i = 0; i < ATOM_LOG_COUNTOF(cases); i++) {
+  for (size_t i = 0; i < countof(cases); i++) {
     char out[512];
     g_emit_level = cases[i].level;
     g_emit_file  = "src/engine/logger.c";
@@ -207,6 +207,20 @@ TEST_CASE(test_log_level_invalid_falls_back_to_info) {
   REQUIRE(capture_log(out, sizeof out, emit_log_message));
   REQUIRE(line_contains(out, "INFO"));
   REQUIRE(line_contains(out, "fallback"));
+  return true;
+}
+
+TEST_CASE(test_set_level_filters_lower_levels) {
+  atom_log_set_level(ATOM_LOG_WARN);
+  char out[512];
+  StderrCapture cap;
+  REQUIRE(capture_begin(&cap));
+  atom_log_info("dropped-info");
+  atom_log_warn("kept-warn");
+  REQUIRE(capture_end(&cap, out, sizeof out));
+  atom_log_set_level(ATOM_LOG_TRACE);
+  REQUIRE(!line_contains(out, "dropped-info"));
+  REQUIRE(line_contains(out, "kept-warn"));
   return true;
 }
 
@@ -423,6 +437,7 @@ TEST_CASE(test_warn_has_no_sdl_style_prefix) {
 static TEST_SUITE(suite_atom_log) {
   RUN_TEST_CASE(test_log_level_tags);
   RUN_TEST_CASE(test_log_level_invalid_falls_back_to_info);
+  RUN_TEST_CASE(test_set_level_filters_lower_levels);
   RUN_TEST_CASE(test_log_macros_forward_to_message);
   RUN_TEST_CASE(test_src_relative_path_from_absolute);
   RUN_TEST_CASE(test_src_relative_path_capital_s);

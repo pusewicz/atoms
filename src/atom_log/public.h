@@ -7,7 +7,6 @@
 #define ATOM_LOG_PUBLIC_H
 
 #include <stdbool.h>
-#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,14 +19,6 @@ extern "C" {
 #define ATOM_LOG_API
 #endif
 #endif
-
-/**
- * @brief Compile-time length of a fixed array (rejects decayed pointers).
- *
- * Uses C23 @c typeof and @c _Generic so passing a pointer is a type error.
- */
-#define ATOM_LOG_COUNTOF(arr)                                                  \
-  (_Generic(&(arr), typeof((arr)[0])(*)[]: (sizeof(arr) / sizeof((arr)[0]))))
 
 /**
  * @brief Severity levels for log lines.
@@ -54,9 +45,9 @@ typedef void (*AtomLogOutputFn)(void* userdata, const char* line);
 /**
  * @brief Configure logging for the process.
  *
- * Detects colour (TTY + NO_COLOR), installs the default stderr writer, and
- * when ATOM_LOG_SDL is defined installs the SDL log output backend. Call once
- * at startup.
+ * Detects colour support (TTY and the NO_COLOR environment variable) and,
+ * when ATOM_LOG_SDL is defined, installs the SDL log output backend. Call
+ * once at startup.
  */
 ATOM_LOG_API void atom_log_init(void);
 
@@ -70,17 +61,19 @@ ATOM_LOG_API void atom_log_init(void);
 ATOM_LOG_API void atom_log_set_level(AtomLogLevel min);
 
 /**
- * @brief Replace the default stderr writer.
+ * @brief Send formatted lines to a custom writer instead of stderr.
  *
- * @param fn        Callback, or nullptr to restore stderr.
- * @param userdata  Passed to @p fn.
+ * @param fn        Callback, or nullptr to restore the stderr default.
+ * @param userdata  Passed through to @p fn.
  */
 ATOM_LOG_API void atom_log_set_output(AtomLogOutputFn fn, void* userdata);
 
 /**
- * @brief Force ANSI colour on or off (test / override hook).
+ * @brief Force ANSI colour on or off.
  *
- * @param enabled  true to enable colour escape sequences.
+ * Overrides the detection done by atom_log_init. Intended for tests.
+ *
+ * @param enabled  true to emit colour escape sequences.
  */
 ATOM_LOG_API void atom_log_debug_force_color(bool enabled);
 

@@ -142,6 +142,25 @@ TEST_CASE(test_init_installs_output_callback) {
   return true;
 }
 
+static void emit_trace_via_api(void) {
+  atom_log_message(ATOM_LOG_TRACE, "src/game/ui.c", 5, "trace-through");
+}
+
+/* init alone must let every atom_log level through; SDL's default priority
+ * for the custom category would otherwise drop lines below ERROR. */
+TEST_CASE(test_init_passes_trace_without_manual_sdl_priorities) {
+  SDL_ResetLogPriorities();
+  atom_log_init();
+  atom_log_set_level(ATOM_LOG_TRACE);
+  atom_log_debug_force_color(false);
+
+  char out[512];
+  REQUIRE(capture_log(out, sizeof out, emit_trace_via_api));
+  REQUIRE(line_contains(out, "TRCE"));
+  REQUIRE(line_contains(out, "trace-through"));
+  return true;
+}
+
 TEST_CASE(test_category_labels) {
   struct {
     int category;
@@ -154,7 +173,7 @@ TEST_CASE(test_category_labels) {
       {9999, "sdl"},
   };
 
-  for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++) {
+  for (size_t i = 0; i < countof(cases); i++) {
     char out[512];
     StderrCapture cap;
     REQUIRE(capture_begin(&cap));
@@ -180,7 +199,7 @@ TEST_CASE(test_all_sdl_priority_tags) {
       {SDL_LOG_PRIORITY_CRITICAL, "CRIT"}, {(SDL_LogPriority)12345, "????"},
   };
 
-  for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++) {
+  for (size_t i = 0; i < countof(cases); i++) {
     char out[512];
     g_cb_category = SDL_LOG_CATEGORY_APPLICATION;
     g_cb_priority = cases[i].priority;
@@ -247,6 +266,7 @@ TEST_CASE(test_atom_log_message_uses_location) {
 
 static TEST_SUITE(suite_atom_log_sdl) {
   RUN_TEST_CASE(test_init_installs_output_callback);
+  RUN_TEST_CASE(test_init_passes_trace_without_manual_sdl_priorities);
   RUN_TEST_CASE(test_category_labels);
   RUN_TEST_CASE(test_all_sdl_priority_tags);
   RUN_TEST_CASE(test_marked_body_splits_location);
