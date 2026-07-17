@@ -53,6 +53,10 @@ bundle exec rake version:check
 # GitHub Pages updates only when a library release tag is pushed
 ```
 
+**Release an atom** (agent): `/release-atom` or `/release-atom atom_log patch` —
+promotes the changelog, tags `atom_log-vX.Y.Z`, pushes so CI publishes
+`atom_log.h` + docs, then bumps VERSION for continued development.
+
 ## License
 
 [Zlib](LICENSE) — see the file at a specific commit SHA for the text that applied to a given release.
