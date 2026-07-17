@@ -7,10 +7,27 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Added
+
+- SDL backend example (`examples/hello_sdl.c`); `rake example:atom_log` builds
+  it when SDL3 is available.
+
+### Removed
+
+- `ATOM_LOG_COUNTOF` from the public API. The library itself never used it,
+  and C2y standardises `countof`; the tests use that spelling (via
+  `<stdcountof.h>` where available).
+
 ### Fixed
 
 - Docs: include detailed description paragraphs and `@c` / `@p` markup from
-  `public.h` (e.g. `ATOM_LOG_COUNTOF` typeof / `_Generic` note).
+  `public.h`.
+- SDL backend: lines below SDL's default priority for the custom log category
+  (INFO and lower in release builds, TRACE in debug) were silently dropped.
+  `atom_log_init` now pins that category to trace, so `atom_log_set_level` is
+  the only level filter.
+- SDL backend: long messages no longer lose their tail to the internal
+  location prefix.
 
 ## [0.1.0] - 2026-07-17
 ### Added

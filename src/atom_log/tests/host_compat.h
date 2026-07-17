@@ -1,6 +1,6 @@
 /**
  * @file host_compat.h
- * @brief Minimal POSIX shims for unit tests (Windows vs Unix).
+ * @brief Test helpers: minimal POSIX shims (Windows vs Unix) and utilities.
  *
  * Include this only after defining feature-test macros when building with
  * strict -std=c23 (see test_*.c). On Unix, setenv/fileno need _DEFAULT_SOURCE
@@ -12,6 +12,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
+/* C2y countof; strict C23 rejects _Countof, so fall back until the project
+ * builds in C2y mode. */
+#if __STDC_VERSION__ > 202311L && __has_include(<stdcountof.h>)
+#include <stdcountof.h>
+#else
+#define countof(arr) (sizeof(arr) / sizeof((arr)[0]))
+#endif
 
 #if defined(_WIN32)
 #include <io.h>

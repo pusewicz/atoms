@@ -58,7 +58,7 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 - Zero hard deps in core; optional backends behind feature defines.
 - **C23, modern and strict:** `nullptr`, `constexpr`, typed enums (`enum E : int`),
   `[[noreturn]]` / `[[gnu::format]]`, `_Generic` / `typeof` when they clarify
-  types (e.g. `ATOM_LOG_COUNTOF`). Prefer standard types (`int`, `size_t`, `bool`).
+  types. Prefer standard types (`int`, `size_t`, `bool`).
 - **Warnings:** tests/examples compile with `-std=c23 -Wall -Wextra -Wpedantic
   -Werror` plus the curated set in `rakelib/cflags.rb`. `third_party/` is
   `-isystem`. Run `rake format` / `rake format:check` / `rake tidy`.

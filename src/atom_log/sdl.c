@@ -6,8 +6,10 @@
 
 #include <SDL3/SDL_log.h>
 
-/* RS (record separator): pack call-site across module boundaries via SDL body.
- * static const for compilers that lack C23 constexpr objects. */
+/* ASCII record separator. atom_log__emit packs "<RS>location<RS>message" into
+ * the SDL message body so the call site survives SDL's log pipeline.
+ * static const rather than constexpr: some compilers accept -std=c23 without
+ * supporting C23 constexpr objects. */
 static const char atom_log_loc_mark = '\x1e';
 
 static const char* atom_log__category_label(int category) {
@@ -113,26 +115,23 @@ static void atom_log__sdl_output(void* userdata, int category,
 }
 
 static void atom_log__sdl_install(void) {
-  SDL_SetLogPriorityPrefix(SDL_LOG_PRIORITY_TRACE, "");
-  SDL_SetLogPriorityPrefix(SDL_LOG_PRIORITY_VERBOSE, "");
-  SDL_SetLogPriorityPrefix(SDL_LOG_PRIORITY_DEBUG, "");
-  SDL_SetLogPriorityPrefix(SDL_LOG_PRIORITY_INFO, "");
-  SDL_SetLogPriorityPrefix(SDL_LOG_PRIORITY_WARN, "");
-  SDL_SetLogPriorityPrefix(SDL_LOG_PRIORITY_ERROR, "");
-  SDL_SetLogPriorityPrefix(SDL_LOG_PRIORITY_CRITICAL, "");
+  for (int p = SDL_LOG_PRIORITY_TRACE; p < SDL_LOG_PRIORITY_COUNT; ++p) {
+    SDL_SetLogPriorityPrefix((SDL_LogPriority)p, "");
+  }
   SDL_SetLogOutputFunction(atom_log__sdl_output, nullptr);
 #if !defined(NDEBUG)
   SDL_SetLogPriorities(SDL_LOG_PRIORITY_VERBOSE);
 #endif
+  /* atom_log emits through the custom category; SDL's default priority for it
+   * (ERROR) would drop lower levels. atom_log_set_level remains the filter. */
+  SDL_SetLogPriority(SDL_LOG_CATEGORY_CUSTOM, SDL_LOG_PRIORITY_TRACE);
 }
 
 static void atom_log__emit(AtomLogLevel level, const char* file, int line,
                            const char* user_message) {
-  if ((int)level < (int)g_atom_log_min_level) {
-    return;
-  }
   char loc[128];
-  char body[1024];
+  /* Sized so the location prefix and a full 1023-byte message both fit. */
+  char body[1280];
   atom_log__format_location(loc, sizeof loc, file, line);
   const int written =
       snprintf(body, sizeof body, "%c%s%c%s", atom_log_loc_mark, loc,
@@ -150,9 +149,6 @@ static void atom_log__sdl_install(void) {}
 
 static void atom_log__emit(AtomLogLevel level, const char* file, int line,
                            const char* user_message) {
-  if ((int)level < (int)g_atom_log_min_level) {
-    return;
-  }
   const AtomLogPrio prio = atom_log__prio_from_level(level);
   char loc[128];
   atom_log__format_location(loc, sizeof loc, file, line);
