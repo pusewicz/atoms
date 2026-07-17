@@ -14,6 +14,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Amalgamation via `rake dist`; core tests without SDL; optional SDL suite.
 - `ATOM_LOG_COUNTOF` (`_Generic` + `typeof`) for fixed-array length.
 - Tooling: pedantic/`-Werror` CFLAGS, `.editorconfig`, `.clang-format`, `.clang-tidy`.
+- Docs: GitHub-Flavoured Markdown via commonmarker; Rouge (`github.light` /
+  `github.dark`) for fenced code and API signatures.
 
 ### Changed
 

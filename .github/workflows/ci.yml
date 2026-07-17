@@ -16,6 +16,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
+          bundler-cache: true
       - name: Install SDL3 (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -25,8 +26,8 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install sdl3 pkg-config
       - name: version:check
-        run: rake version:check
+        run: bundle exec rake version:check
       - name: test
-        run: rake test
+        run: bundle exec rake test
       - name: docs:check
-        run: rake docs:check
+        run: bundle exec rake docs:check

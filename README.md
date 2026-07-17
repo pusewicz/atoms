@@ -45,9 +45,10 @@ int main(void) {
 ## Develop
 
 ```bash
-rake test          # amalgamate + run suites
-rake docs          # build static docs into build/docs/
-rake version:check
+bundle install     # rake, commonmarker (GFM), rouge
+bundle exec rake test          # amalgamate + run suites
+bundle exec rake docs          # GFM markdown + Rouge-highlighted static docs
+bundle exec rake version:check
 ```
 
 ## License

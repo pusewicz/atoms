@@ -94,14 +94,59 @@ pre {
   font-size: 0.9em;
 }
 
-pre {
+pre,
+pre.highlight {
   background: var(--code-bg);
   padding: 0.85rem 1rem;
   overflow-x: auto;
   border-radius: 6px;
+  margin: 0.75rem 0;
 }
 
-.sig {
+pre.highlight code {
+  font-size: inherit;
+  background: transparent;
+}
+
+/* Inline code in prose */
+:not(pre) > code {
+  background: var(--code-bg);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* GFM tables from commonmarker */
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  font-size: 0.95em;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.65rem;
+  text-align: left;
+}
+
+.markdown-body th {
+  background: var(--code-bg);
+}
+
+.markdown-body blockquote {
+  margin: 1rem 0;
+  padding-left: 1rem;
+  border-left: 3px solid var(--border);
+  color: var(--muted);
+}
+
+.markdown-body .task-list-item {
+  list-style: none;
+}
+
+.symbol .highlight {
   margin: 0.35rem 0 0.75rem;
 }
 

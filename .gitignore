@@ -1,5 +1,7 @@
 /dist/
 /build/
+/vendor/bundle/
+/.bundle/
 *.o
 *.d
 .DS_Store

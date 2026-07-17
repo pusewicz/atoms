@@ -18,6 +18,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
+          bundler-cache: true
       - name: Install SDL3
         run: |
           sudo apt-get update
@@ -36,14 +37,14 @@ jobs:
           echo "lib=$LIB" >> "$GITHUB_OUTPUT"
           echo "ver=$VER" >> "$GITHUB_OUTPUT"
       - name: Build dist
-        run: rake "dist:${{ steps.meta.outputs.lib }}"
+        run: bundle exec rake "dist:${{ steps.meta.outputs.lib }}"
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/${{ steps.meta.outputs.lib }}.h
           generate_release_notes: true
       - name: Build docs
-        run: rake docs
+        run: bundle exec rake docs
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

@@ -2,6 +2,7 @@
 
 require_relative "atoms"
 require_relative "doc_parse"
+require_relative "markdown"
 require "cgi"
 require "erb"
 require "fileutils"
@@ -14,15 +15,19 @@ module Atoms
       sha = Atoms.git_sha
       sha_display = Atoms.git_dirty? ? "#{sha}-dirty" : sha
       Atoms::DOCS_OUT.mkpath
-      FileUtils.cp(Atoms::SITE.join("styles.css"), Atoms::DOCS_OUT.join("styles.css")) if Atoms::SITE.join("styles.css").file?
+
+      write_styles!
 
       libs = Atoms.libs.map do |name|
+        readme_path = Atoms.lib_dir(name).join("README.md")
+        changelog_path = Atoms.lib_dir(name).join("CHANGELOG.md")
         {
           name: name,
           version: Atoms.version(name),
           symbols: DocParse.parse_public(name),
           examples: DocParse.examples(name),
-          readme: md_basic(Atoms.lib_dir(name).join("README.md").read),
+          readme: Markdown.to_html(readme_path.read),
+          changelog: changelog_path.file? ? Markdown.to_html(changelog_path.read) : "",
           source_url: "#{Atoms::GITHUB}/tree/#{sha}/src/#{name}",
           examples_url: "#{Atoms::GITHUB}/tree/#{sha}/src/#{name}/examples",
           changelog_url: "#{Atoms::GITHUB}/blob/#{sha}/src/#{name}/CHANGELOG.md",
@@ -37,60 +42,24 @@ module Atoms
       Atoms::DOCS_OUT
     end
 
+    def write_styles!
+      site_css = Atoms::SITE.join("styles.css")
+      css = +""
+      css << site_css.read if site_css.file?
+      css << "\n"
+      css << Markdown.theme_css
+      Atoms::DOCS_OUT.join("styles.css").write(css)
+    end
+
     def h(s)
       CGI.escapeHTML(s.to_s)
     end
 
-    def md_basic(text)
-      # Minimal markdown: fenced code, headings, paragraphs, inline code, links.
-      out = +""
-      lines = text.lines
-      i = 0
-      while i < lines.size
-        line = lines[i]
-        if line.start_with?("```")
-          lang = line.strip.delete_prefix("```")
-          i += 1
-          code = +""
-          while i < lines.size && !lines[i].start_with?("```")
-            code << lines[i]
-            i += 1
-          end
-          i += 1
-          out << "<pre><code class=\"language-#{h(lang)}\">#{h(code)}</code></pre>\n"
-        elsif (hm = line.match(/\A(#+)\s+(.*)\z/))
-          level = hm[1].length
-          out << "<h#{level}>#{h(hm[2].strip)}</h#{level}>\n"
-          i += 1
-        elsif line.strip.empty?
-          i += 1
-        elsif line.start_with?("|")
-          # skip tables as preformatted
-          table = +""
-          while i < lines.size && lines[i].start_with?("|")
-            table << lines[i]
-            i += 1
-          end
-          out << "<pre>#{h(table)}</pre>\n"
-        else
-          para = +line
-          i += 1
-          while i < lines.size && !lines[i].strip.empty? && !lines[i].start_with?("#", "```", "|")
-            para << lines[i]
-            i += 1
-          end
-          html = h(para.strip)
-          html = html.gsub(/`([^`]+)`/, '<code>\1</code>')
-          html = html.gsub(/\[([^\]]+)\]\(([^)]+)\)/, '<a href="\2">\1</a>')
-          out << "<p>#{html}</p>\n"
-        end
-      end
-      out
-    end
-
-    def layout(title, body, sha_display)
+    def layout(title, body, sha_display, root: true)
       license = "#{Atoms::GITHUB}/blob/#{Atoms.git_sha}/LICENSE"
       collection = "#{Atoms::GITHUB}/tree/#{Atoms.git_sha}"
+      css_href = root ? "styles.css" : "../styles.css"
+      home_href = root ? "./" : "../"
       <<~HTML
         <!DOCTYPE html>
         <html lang="en">
@@ -98,11 +67,11 @@ module Atoms
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <title>#{h(title)}</title>
-          <link rel="stylesheet" href="#{title == 'atoms' ? 'styles.css' : '../styles.css'}">
+          <link rel="stylesheet" href="#{h(css_href)}">
         </head>
         <body>
           <header class="site-header">
-            <a class="brand" href="#{title == 'atoms' ? './' : '../'}">atoms</a>
+            <a class="brand" href="#{h(home_href)}">atoms</a>
           </header>
           <main>
             #{body}
@@ -125,7 +94,9 @@ module Atoms
         body << "— <a href=\"#{h(lib[:source_url])}\">source</a></li>"
       end
       body << "</ul>"
-      Atoms::DOCS_OUT.join("index.html").write(layout("atoms", body, sha_display))
+      Atoms::DOCS_OUT.join("index.html").write(
+        layout("atoms", body, sha_display, root: true)
+      )
     end
 
     def render_lib(lib, sha_display)
@@ -136,12 +107,12 @@ module Atoms
       body << "<nav class=\"lib-nav\">"
       body << "<a href=\"#{h(lib[:source_url])}\">Source</a>"
       body << "<a href=\"#{h(lib[:examples_url])}\">Examples</a>"
-      body << "<a href=\"#{h(lib[:changelog_url])}\">Changelog</a>"
+      body << "<a href=\"#changelog\">Changelog</a>"
       body << "<a href=\"#{h(lib[:download_url])}\">Download</a>"
       body << "<a href=\"#{h(lib[:license_url])}\">License</a>"
       body << "</nav>"
 
-      body << "<section class=\"overview\">#{lib[:readme]}</section>"
+      body << "<section class=\"overview markdown-body\">#{lib[:readme]}</section>"
 
       body << "<section id=\"examples\"><h2>Examples</h2><ul>"
       lib[:examples].each do |ex|
@@ -155,7 +126,7 @@ module Atoms
       lib[:symbols].each do |sym|
         body << "<article class=\"symbol\" id=\"#{h(sym.name)}\">"
         body << "<h3><code>#{h(sym.name)}</code> <span class=\"kind\">#{h(sym.kind)}</span></h3>"
-        body << "<pre class=\"sig\"><code>#{h(sym.signature)}</code></pre>"
+        body << Markdown.highlight_c(sym.signature)
         body << "<p>#{h(sym.brief)}</p>" if sym.brief && !sym.brief.empty?
         if sym.params && !sym.params.empty?
           body << "<dl class=\"params\">"
@@ -164,16 +135,23 @@ module Atoms
           end
           body << "</dl>"
         end
-        body << "<p class=\"returns\"><strong>Returns:</strong> #{h(sym.returns)}</p>" if sym.returns
+        if sym.returns
+          body << "<p class=\"returns\"><strong>Returns:</strong> #{h(sym.returns)}</p>"
+        end
         body << "</article>"
       end
       body << "</section>"
 
-      # fix stylesheet path for nested page
-      html = layout(lib[:name], body, sha_display)
-      html = html.sub('href="styles.css"', 'href="../styles.css"')
-                 .sub('href="./"', 'href="../"')
-      dir.join("index.html").write(html)
+      unless lib[:changelog].empty?
+        body << "<section id=\"changelog\" class=\"markdown-body\">"
+        body << "<h2>Changelog</h2>"
+        body << lib[:changelog]
+        body << "</section>"
+      end
+
+      dir.join("index.html").write(
+        layout(lib[:name], body, sha_display, root: false)
+      )
     end
   end
 end

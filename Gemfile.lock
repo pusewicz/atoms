@@ -1,0 +1,40 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    commonmarker (2.9.0-aarch64-linux)
+    commonmarker (2.9.0-aarch64-linux-musl)
+    commonmarker (2.9.0-arm-linux)
+    commonmarker (2.9.0-arm64-darwin)
+    commonmarker (2.9.0-x86_64-darwin)
+    commonmarker (2.9.0-x86_64-linux)
+    commonmarker (2.9.0-x86_64-linux-musl)
+    rake (13.4.2)
+    rouge (4.7.0)
+
+PLATFORMS
+  aarch64-linux
+  aarch64-linux-musl
+  arm-linux
+  arm64-darwin
+  x86_64-darwin
+  x86_64-linux
+  x86_64-linux-musl
+
+DEPENDENCIES
+  commonmarker (~> 2.0)
+  rake (~> 13.0)
+  rouge (~> 4.0)
+
+CHECKSUMS
+  commonmarker (2.9.0-aarch64-linux) sha256=e2b4aadb9a2cfa4e206582641ce3a49465549ac1ed4c289fdd63b78d8f24579c
+  commonmarker (2.9.0-aarch64-linux-musl) sha256=1cf4d2821f2a7e64945f1ed7c4eeced586fdb27ea7fe7337788802cf8f57cfca
+  commonmarker (2.9.0-arm-linux) sha256=290a000947cf9d154d0480c33c0a36bcef49ce4c2e74bb75e9d06f5afe93f670
+  commonmarker (2.9.0-arm64-darwin) sha256=1748dbfa4f5813b0d2a14bb4bbfa65a4ec293aa1c825016d60029ee0e132b046
+  commonmarker (2.9.0-x86_64-darwin) sha256=0a9914ccfd2f5d2a59c7bd0dda4fe90eb084cf513b477e499008e09ec9d6edd6
+  commonmarker (2.9.0-x86_64-linux) sha256=8cfe92970eef585a19ddf6613224b91cab64d6029834661bda801f877c9c7f43
+  commonmarker (2.9.0-x86_64-linux-musl) sha256=293921398b839f79ceaf55010e061357e34f053822c3b003cd0be6686176335e
+  rake (13.4.2) sha256=cb825b2bd5f1f8e91ca37bddb4b9aaf345551b4731da62949be002fa89283701
+  rouge (4.7.0) sha256=dba5896715c0325c362e895460a6d350803dbf6427454f49a47500f3193ea739
+
+BUNDLED WITH
+  4.0.16
