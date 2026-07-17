@@ -29,5 +29,3 @@ jobs:
         run: bundle exec rake version:check
       - name: test
         run: bundle exec rake test
-      - name: docs:check
-        run: bundle exec rake docs:check

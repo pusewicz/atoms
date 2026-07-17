@@ -43,8 +43,9 @@ jobs:
         with:
           files: dist/${{ steps.meta.outputs.lib }}.h
           generate_release_notes: true
+      # Docs site is built and published only on release tags (not PR/`main` CI).
       - name: Build docs
-        run: bundle exec rake docs
+        run: bundle exec rake docs:check && bundle exec rake docs
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

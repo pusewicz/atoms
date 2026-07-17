@@ -10,7 +10,7 @@ task :docs do
 end
 
 namespace :docs do
-  desc "Check public symbols are documented and each lib has examples"
+  desc "Validate public.h docs + examples (no site build)"
   task :check do
     Atoms.libs.each do |name|
       symbols = Atoms::DocParse.parse_public(name)
@@ -26,7 +26,6 @@ namespace :docs do
 
       puts "ok docs #{name} (#{symbols.size} symbols, #{ex.size} examples)"
     end
-    Rake::Task[:docs].invoke
   end
 
   desc "Build docs and serve on http://127.0.0.1:PORT (default 4000; PORT=…)"

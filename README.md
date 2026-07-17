@@ -47,9 +47,10 @@ int main(void) {
 ```bash
 bundle install     # rake, commonmarker (GFM), rouge
 bundle exec rake test          # amalgamate + run suites
-bundle exec rake docs          # GFM markdown + Rouge-highlighted static docs
+bundle exec rake docs          # local static docs (CI does not build these)
 bundle exec rake docs:serve    # build + serve at http://127.0.0.1:4000
 bundle exec rake version:check
+# GitHub Pages updates only when a library release tag is pushed
 ```
 
 ## License
