@@ -54,7 +54,3 @@ rake test:atom_log:sdl   # needs SDL3
 rake example:atom_log
 rake docs
 ```
-
-## License
-
-Root [LICENSE](../../LICENSE) (Zlib). Released headers link to the license at a specific commit SHA.

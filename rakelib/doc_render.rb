@@ -17,21 +17,23 @@ module Atoms
       Atoms::DOCS_OUT.mkpath
 
       write_styles!
+      license_text = Atoms::ROOT.join("LICENSE").read
 
       libs = Atoms.libs.map do |name|
         readme_path = Atoms.lib_dir(name).join("README.md")
         changelog_path = Atoms.lib_dir(name).join("CHANGELOG.md")
+        readme_md = strip_license_section(readme_path.read)
         {
           name: name,
           version: Atoms.version(name),
           symbols: DocParse.parse_public(name),
           examples: DocParse.examples(name),
-          readme: Markdown.to_html(readme_path.read),
+          readme: Markdown.to_html(readme_md),
           changelog: changelog_path.file? ? Markdown.to_html(changelog_path.read) : "",
+          license_text: license_text,
           source_url: "#{Atoms::GITHUB}/tree/#{sha}/src/#{name}",
           examples_url: "#{Atoms::GITHUB}/tree/#{sha}/src/#{name}/examples",
           changelog_url: "#{Atoms::GITHUB}/blob/#{sha}/src/#{name}/CHANGELOG.md",
-          license_url: "#{Atoms::GITHUB}/blob/#{sha}/LICENSE",
           download_url: "#{Atoms::GITHUB}/releases/download/#{name}-v#{Atoms.version(name)}/#{name}.h",
           public_url: "#{Atoms::GITHUB}/blob/#{sha}/src/#{name}/public.h"
         }
@@ -40,6 +42,11 @@ module Atoms
       render_index(libs, sha_display)
       libs.each { |lib| render_lib(lib, sha_display) }
       Atoms::DOCS_OUT
+    end
+
+    # License is rendered as embedded full text; drop any README ## License section.
+    def strip_license_section(md)
+      md.sub(/\n##[ \t]+License\b.*\z/m, "\n")
     end
 
     def write_styles!
@@ -56,10 +63,16 @@ module Atoms
     end
 
     def layout(title, body, sha_display, root: true)
-      license = "#{Atoms::GITHUB}/blob/#{Atoms.git_sha}/LICENSE"
       collection = "#{Atoms::GITHUB}/tree/#{Atoms.git_sha}"
       css_href = root ? "styles.css" : "../styles.css"
       home_href = root ? "./" : "../"
+      # On lib pages the license is embedded; on the index point at the first lib.
+      license_href = root ? nil : "#license"
+      footer_license = if license_href
+                         "· <a href=\"#{h(license_href)}\">license</a>"
+                       else
+                         ""
+                       end
       <<~HTML
         <!DOCTYPE html>
         <html lang="en">
@@ -79,10 +92,19 @@ module Atoms
           <footer class="site-footer">
             <p>Docs built from commit <code>#{h(sha_display)}</code>
               · <a href="#{h(collection)}">source</a>
-              · <a href="#{h(license)}">license</a></p>
+              #{footer_license}</p>
           </footer>
         </body>
         </html>
+      HTML
+    end
+
+    def license_section(text)
+      <<~HTML
+        <section id="license">
+          <h2>License</h2>
+          <pre class="license"><code>#{h(text.rstrip)}\n</code></pre>
+        </section>
       HTML
     end
 
@@ -109,7 +131,7 @@ module Atoms
       body << "<a href=\"#{h(lib[:examples_url])}\">Examples</a>"
       body << "<a href=\"#changelog\">Changelog</a>"
       body << "<a href=\"#{h(lib[:download_url])}\">Download</a>"
-      body << "<a href=\"#{h(lib[:license_url])}\">License</a>"
+      body << "<a href=\"#license\">License</a>"
       body << "</nav>"
 
       body << "<section class=\"overview markdown-body\">#{lib[:readme]}</section>"
@@ -148,6 +170,8 @@ module Atoms
         body << lib[:changelog]
         body << "</section>"
       end
+
+      body << license_section(lib[:license_text])
 
       dir.join("index.html").write(
         layout(lib[:name], body, sha_display, root: false)
