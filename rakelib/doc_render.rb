@@ -75,7 +75,8 @@ module Atoms
       CGI.escapeHTML(s.to_s)
     end
 
-    def layout(title, body, sha_display, root: true, scripts: [])
+    def layout(title, body, sha_display, root: true, scripts: [],
+               lib_name: nil, lib_version: nil)
       collection = "#{Atoms::GITHUB}/tree/#{Atoms.git_sha}"
       css_href = root ? "styles.css" : "../styles.css"
       home_href = root ? "./" : "../"
@@ -84,6 +85,15 @@ module Atoms
       script_tags = scripts.map { |s|
         %(<script src="#{h(script_prefix + s)}" defer></script>)
       }.join("\n  ")
+
+      crumb = if lib_name
+                <<~HTML.chomp
+                  <span class="header-sep" aria-hidden="true">/</span>
+                        <a class="header-lib" href="#top">#{h(lib_name)} <span class="ver">v#{h(lib_version)}</span></a>
+                HTML
+              else
+                ""
+              end
 
       body_class = root ? "" : ' class="has-toc"'
       <<~HTML
@@ -96,9 +106,12 @@ module Atoms
           <link rel="stylesheet" href="#{h(css_href)}">
           #{script_tags}
         </head>
-        <body#{body_class}>
+        <body id="top"#{body_class}>
           <header class="site-header">
-            <a class="brand" href="#{h(home_href)}">atoms</a>
+            <div class="site-header-inner">
+              <a class="brand" href="#{h(home_href)}">atoms</a>
+              #{crumb}
+            </div>
           </header>
           #{body}
           <footer class="site-footer">
@@ -233,7 +246,15 @@ module Atoms
       body << %(</main>\n</div>\n)
 
       dir.join("index.html").write(
-        layout(lib[:name], body, sha_display, root: false, scripts: ["toc.js"])
+        layout(
+          lib[:name],
+          body,
+          sha_display,
+          root: false,
+          scripts: ["toc.js"],
+          lib_name: lib[:name],
+          lib_version: lib[:version]
+        )
       )
     end
   end
