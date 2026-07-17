@@ -7,12 +7,12 @@
 #include <pico_unit.h>
 
 #define ATOM_LOG_IMPLEMENTATION
-#include "atom_log.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "atom_log.h"
 
 /* ---- stderr capture ------------------------------------------------------ */
 
@@ -34,12 +34,13 @@ static void capture_drop(StderrCapture* c) {
 }
 
 static bool capture_begin(StderrCapture* c) {
-  c->path[0] = '\0';
-  c->tmp_fd = -1;
+  c->path[0]  = '\0';
+  c->tmp_fd   = -1;
   c->saved_fd = -1;
   fflush(stderr);
 
-  snprintf(c->path, sizeof c->path, "build/test_atom_log_%d.tmp", (int)getpid());
+  snprintf(c->path, sizeof c->path, "build/test_atom_log_%d.tmp",
+           (int)getpid());
   FILE* f = fopen(c->path, "w+b");
   if (!f) {
     c->path[0] = '\0';
@@ -118,7 +119,9 @@ static void fixture_setup(void) {
 
 static void fixture_teardown(void) {}
 
-static bool has_ansi(const char* s) { return strstr(s, "\x1b[") != NULL; }
+static bool has_ansi(const char* s) {
+  return strstr(s, "\x1b[") != nullptr;
+}
 
 static bool time_column_ok(const char* line) {
   if (strlen(line) < 14) {
@@ -142,7 +145,7 @@ static bool time_column_ok(const char* line) {
 }
 
 static bool line_contains(const char* line, const char* needle) {
-  return strstr(line, needle) != NULL;
+  return strstr(line, needle) != nullptr;
 }
 
 static AtomLogLevel g_emit_level;
@@ -172,13 +175,13 @@ TEST_CASE(test_log_level_tags) {
       {ATOM_LOG_ERROR, "ERR "},
   };
 
-  for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++) {
+  for (size_t i = 0; i < ATOM_LOG_COUNTOF(cases); i++) {
     char out[512];
     g_emit_level = cases[i].level;
-    g_emit_file = "src/engine/logger.c";
-    g_emit_line = 1;
-    g_emit_fmt = "lvl";
-    g_emit_arg = NULL;
+    g_emit_file  = "src/engine/logger.c";
+    g_emit_line  = 1;
+    g_emit_fmt   = "lvl";
+    g_emit_arg   = nullptr;
     REQUIRE(capture_log(out, sizeof out, emit_log_message));
     REQUIRE(time_column_ok(out));
     REQUIRE(line_contains(out, cases[i].tag));
@@ -190,10 +193,10 @@ TEST_CASE(test_log_level_tags) {
 TEST_CASE(test_log_level_invalid_falls_back_to_info) {
   char out[512];
   g_emit_level = (AtomLogLevel)99;
-  g_emit_file = "src/engine/logger.c";
-  g_emit_line = 1;
-  g_emit_fmt = "fallback";
-  g_emit_arg = NULL;
+  g_emit_file  = "src/engine/logger.c";
+  g_emit_line  = 1;
+  g_emit_fmt   = "fallback";
+  g_emit_arg   = nullptr;
   REQUIRE(capture_log(out, sizeof out, emit_log_message));
   REQUIRE(line_contains(out, "INFO"));
   REQUIRE(line_contains(out, "fallback"));
@@ -215,10 +218,10 @@ TEST_CASE(test_log_macros_forward_to_message) {
 TEST_CASE(test_src_relative_path_from_absolute) {
   char out[512];
   g_emit_level = ATOM_LOG_INFO;
-  g_emit_file = "/Users/dev/space-delivery/src/game/ui.c";
-  g_emit_line = 416;
-  g_emit_fmt = "path";
-  g_emit_arg = NULL;
+  g_emit_file  = "/Users/dev/space-delivery/src/game/ui.c";
+  g_emit_line  = 416;
+  g_emit_fmt   = "path";
+  g_emit_arg   = nullptr;
   REQUIRE(capture_log(out, sizeof out, emit_log_message));
   REQUIRE(line_contains(out, "src/game/ui.c:416"));
   REQUIRE(!line_contains(out, "/Users/dev"));
@@ -228,10 +231,10 @@ TEST_CASE(test_src_relative_path_from_absolute) {
 TEST_CASE(test_src_relative_path_capital_s) {
   char out[512];
   g_emit_level = ATOM_LOG_INFO;
-  g_emit_file = "/proj/Src/engine/logger.c";
-  g_emit_line = 7;
-  g_emit_fmt = "cap";
-  g_emit_arg = NULL;
+  g_emit_file  = "/proj/Src/engine/logger.c";
+  g_emit_line  = 7;
+  g_emit_fmt   = "cap";
+  g_emit_arg   = nullptr;
   REQUIRE(capture_log(out, sizeof out, emit_log_message));
   REQUIRE(line_contains(out, "Src/engine/logger.c:7") ||
           line_contains(out, "src/engine/logger.c:7"));
@@ -241,10 +244,10 @@ TEST_CASE(test_src_relative_path_capital_s) {
 TEST_CASE(test_src_relative_path_backslash) {
   char out[512];
   g_emit_level = ATOM_LOG_INFO;
-  g_emit_file = "C:\\build\\src\\game\\ship.c";
-  g_emit_line = 3;
-  g_emit_fmt = "win";
-  g_emit_arg = NULL;
+  g_emit_file  = "C:\\build\\src\\game\\ship.c";
+  g_emit_line  = 3;
+  g_emit_fmt   = "win";
+  g_emit_arg   = nullptr;
   REQUIRE(capture_log(out, sizeof out, emit_log_message));
   REQUIRE(line_contains(out, "src/game/ship.c:3"));
   REQUIRE(!line_contains(out, "\\"));
@@ -254,10 +257,10 @@ TEST_CASE(test_src_relative_path_backslash) {
 TEST_CASE(test_basename_fallback_when_no_src) {
   char out[512];
   g_emit_level = ATOM_LOG_INFO;
-  g_emit_file = "/usr/local/include/foo.h";
-  g_emit_line = 9;
-  g_emit_fmt = "base";
-  g_emit_arg = NULL;
+  g_emit_file  = "/usr/local/include/foo.h";
+  g_emit_line  = 9;
+  g_emit_fmt   = "base";
+  g_emit_arg   = nullptr;
   REQUIRE(capture_log(out, sizeof out, emit_log_message));
   REQUIRE(line_contains(out, "foo.h:9"));
   REQUIRE(!line_contains(out, "/usr/local"));
@@ -267,15 +270,15 @@ TEST_CASE(test_basename_fallback_when_no_src) {
 TEST_CASE(test_empty_and_null_file_become_dash) {
   char out[512];
   g_emit_level = ATOM_LOG_INFO;
-  g_emit_file = "";
-  g_emit_line = 1;
-  g_emit_fmt = "empty";
-  g_emit_arg = NULL;
+  g_emit_file  = "";
+  g_emit_line  = 1;
+  g_emit_fmt   = "empty";
+  g_emit_arg   = nullptr;
   REQUIRE(capture_log(out, sizeof out, emit_log_message));
   REQUIRE(line_contains(out, "-:1"));
 
-  g_emit_file = NULL;
-  g_emit_fmt = "nullf";
+  g_emit_file = nullptr;
+  g_emit_fmt  = "nullf";
   REQUIRE(capture_log(out, sizeof out, emit_log_message));
   REQUIRE(line_contains(out, "-:1"));
   REQUIRE(line_contains(out, "nullf"));
@@ -285,10 +288,10 @@ TEST_CASE(test_empty_and_null_file_become_dash) {
 TEST_CASE(test_src_must_be_path_component) {
   char out[512];
   g_emit_level = ATOM_LOG_INFO;
-  g_emit_file = "/tmp/foosrc/bar.c";
-  g_emit_line = 2;
-  g_emit_fmt = "bound";
-  g_emit_arg = NULL;
+  g_emit_file  = "/tmp/foosrc/bar.c";
+  g_emit_line  = 2;
+  g_emit_fmt   = "bound";
+  g_emit_arg   = nullptr;
   REQUIRE(capture_log(out, sizeof out, emit_log_message));
   REQUIRE(line_contains(out, "bar.c:2"));
   REQUIRE(!line_contains(out, "foosrc"));
@@ -298,10 +301,10 @@ TEST_CASE(test_src_must_be_path_component) {
 TEST_CASE(test_wide_location_not_truncated) {
   char out[1024];
   g_emit_level = ATOM_LOG_INFO;
-  g_emit_file = "src/game/very/deep/nested/path/that/exceeds/width/module.c";
-  g_emit_line = 99;
-  g_emit_fmt = "wide-msg";
-  g_emit_arg = NULL;
+  g_emit_file  = "src/game/very/deep/nested/path/that/exceeds/width/module.c";
+  g_emit_line  = 99;
+  g_emit_fmt   = "wide-msg";
+  g_emit_arg   = nullptr;
   REQUIRE(capture_log(out, sizeof out, emit_log_message));
   REQUIRE(line_contains(
       out, "src/game/very/deep/nested/path/that/exceeds/width/module.c:99"));
@@ -343,10 +346,10 @@ TEST_CASE(test_no_color_env_disables_ansi) {
   install_logger();
   char out[512];
   g_emit_level = ATOM_LOG_ERROR;
-  g_emit_file = "src/game/ui.c";
-  g_emit_line = 1;
-  g_emit_fmt = "nocolor";
-  g_emit_arg = NULL;
+  g_emit_file  = "src/game/ui.c";
+  g_emit_line  = 1;
+  g_emit_fmt   = "nocolor";
+  g_emit_arg   = nullptr;
   REQUIRE(capture_log(out, sizeof out, emit_log_message));
   REQUIRE(!has_ansi(out));
   REQUIRE(line_contains(out, "ERR "));
@@ -364,10 +367,10 @@ TEST_CASE(test_color_enabled_emits_ansi_and_reset) {
 
   char out[512];
   g_emit_level = ATOM_LOG_INFO;
-  g_emit_file = "src/game/ui.c";
-  g_emit_line = 1;
-  g_emit_fmt = "colored";
-  g_emit_arg = NULL;
+  g_emit_file  = "src/game/ui.c";
+  g_emit_line  = 1;
+  g_emit_fmt   = "colored";
+  g_emit_arg   = nullptr;
   REQUIRE(capture_log(out, sizeof out, emit_log_message));
   REQUIRE(has_ansi(out));
   REQUIRE(line_contains(out, "\x1b[32m"));
@@ -385,10 +388,10 @@ TEST_CASE(test_empty_no_color_allows_color_flag) {
 
   char out[512];
   g_emit_level = ATOM_LOG_INFO;
-  g_emit_file = "src/game/ui.c";
-  g_emit_line = 1;
-  g_emit_fmt = "empty-env";
-  g_emit_arg = NULL;
+  g_emit_file  = "src/game/ui.c";
+  g_emit_line  = 1;
+  g_emit_fmt   = "empty-env";
+  g_emit_arg   = nullptr;
   REQUIRE(capture_log(out, sizeof out, emit_log_message));
   REQUIRE(has_ansi(out));
 
@@ -399,10 +402,10 @@ TEST_CASE(test_empty_no_color_allows_color_flag) {
 TEST_CASE(test_warn_has_no_sdl_style_prefix) {
   char out[512];
   g_emit_level = ATOM_LOG_WARN;
-  g_emit_file = "src/game/ui.c";
-  g_emit_line = 10;
-  g_emit_fmt = "heads up";
-  g_emit_arg = NULL;
+  g_emit_file  = "src/game/ui.c";
+  g_emit_line  = 10;
+  g_emit_fmt   = "heads up";
+  g_emit_arg   = nullptr;
   REQUIRE(capture_log(out, sizeof out, emit_log_message));
   REQUIRE(line_contains(out, "WARN"));
   REQUIRE(!line_contains(out, "WARN: "));

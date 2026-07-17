@@ -4,7 +4,7 @@
 
 #include <time.h>
 
-enum {
+typedef enum AtomLogPrio : int {
   ATOM_LOG_PRIO_TRACE = 0,
   ATOM_LOG_PRIO_VERBOSE,
   ATOM_LOG_PRIO_DEBUG,
@@ -13,11 +13,11 @@ enum {
   ATOM_LOG_PRIO_ERROR,
   ATOM_LOG_PRIO_CRITICAL,
   ATOM_LOG_PRIO_UNKNOWN
-};
+} AtomLogPrio;
 
-enum { ATOM_LOG_LOC_WIDTH = 32 };
+static constexpr int atom_log_loc_width = 32;
 
-static const char* atom_log__level_tag(int prio) {
+static const char* atom_log__level_tag(AtomLogPrio prio) {
   switch (prio) {
   case ATOM_LOG_PRIO_TRACE:
     return "TRCE";
@@ -33,13 +33,14 @@ static const char* atom_log__level_tag(int prio) {
     return "ERR ";
   case ATOM_LOG_PRIO_CRITICAL:
     return "CRIT";
+  case ATOM_LOG_PRIO_UNKNOWN:
   default:
     return "????";
   }
 }
 
 #ifndef ATOM_LOG_NO_COLOR
-static const char* atom_log__level_color(int prio) {
+static const char* atom_log__level_color(AtomLogPrio prio) {
   switch (prio) {
   case ATOM_LOG_PRIO_TRACE:
   case ATOM_LOG_PRIO_VERBOSE:
@@ -54,6 +55,7 @@ static const char* atom_log__level_color(int prio) {
     return "\x1b[31m";
   case ATOM_LOG_PRIO_CRITICAL:
     return "\x1b[1;31m";
+  case ATOM_LOG_PRIO_UNKNOWN:
   default:
     return "";
   }
@@ -61,14 +63,14 @@ static const char* atom_log__level_color(int prio) {
 #endif
 
 static void atom_log__format_time(char* out, size_t out_n) {
-#if defined(CLOCK_REALTIME)
+#ifdef CLOCK_REALTIME
   struct timespec ts;
   if (clock_gettime(CLOCK_REALTIME, &ts) == 0) {
     struct tm tm;
-#if defined(_WIN32)
+#ifdef _WIN32
     if (localtime_s(&tm, &ts.tv_sec) == 0) {
 #else
-    if (localtime_r(&ts.tv_sec, &tm) != NULL) {
+    if (localtime_r(&ts.tv_sec, &tm) != nullptr) {
 #endif
       const int ms = (int)(ts.tv_nsec / 1000000L);
       snprintf(out, out_n, "%02d:%02d:%02d.%03d", tm.tm_hour, tm.tm_min,
@@ -77,10 +79,10 @@ static void atom_log__format_time(char* out, size_t out_n) {
     }
   }
 #else
-  time_t now = time(NULL);
+  time_t now = time(nullptr);
   if (now != (time_t)-1) {
     struct tm* tm = localtime(&now);
-    if (tm) {
+    if (tm != nullptr) {
       snprintf(out, out_n, "%02d:%02d:%02d.000", tm->tm_hour, tm->tm_min,
                tm->tm_sec);
       return;
@@ -91,7 +93,7 @@ static void atom_log__format_time(char* out, size_t out_n) {
 }
 
 #ifndef ATOM_LOG_SDL
-static int atom_log__prio_from_level(AtomLogLevel level) {
+static AtomLogPrio atom_log__prio_from_level(AtomLogLevel level) {
   switch (level) {
   case ATOM_LOG_TRACE:
     return ATOM_LOG_PRIO_TRACE;
@@ -110,7 +112,7 @@ static int atom_log__prio_from_level(AtomLogLevel level) {
 #endif
 
 /// Write one column-aligned line to the active output.
-static void atom_log__write_line(bool color, int prio, const char* loc,
+static void atom_log__write_line(bool color, AtomLogPrio prio, const char* loc,
                                  const char* text, AtomLogOutputFn out_fn,
                                  void* out_ud) {
   char time_buf[16];
@@ -118,24 +120,24 @@ static void atom_log__write_line(bool color, int prio, const char* loc,
 
   atom_log__format_time(time_buf, sizeof time_buf);
 
-  const char* tag = atom_log__level_tag(prio);
-  const char* msg = text ? text : "";
+  const char* tag      = atom_log__level_tag(prio);
+  const char* msg      = text ? text : "";
   const char* location = loc ? loc : "-";
 
 #ifndef ATOM_LOG_NO_COLOR
-  const char* cseq = color ? atom_log__level_color(prio) : "";
-  const char* dim = color ? "\x1b[2m" : "";
+  const char* cseq  = color ? atom_log__level_color(prio) : "";
+  const char* dim   = color ? "\x1b[2m" : "";
   const char* reset = color ? "\x1b[0m" : "";
 #else
   (void)color;
-  const char* cseq = "";
-  const char* dim = "";
+  const char* cseq  = "";
+  const char* dim   = "";
   const char* reset = "";
 #endif
 
   const int loc_pad = (int)strlen(location);
   const int loc_field =
-      loc_pad < ATOM_LOG_LOC_WIDTH ? ATOM_LOG_LOC_WIDTH : loc_pad;
+      loc_pad < atom_log_loc_width ? atom_log_loc_width : loc_pad;
 
   snprintf(line, sizeof line, "%s%s%s  %s%s%s  %s%-*s%s  %s\n", dim, time_buf,
            reset, cseq, tag, reset, dim, loc_field, location, reset, msg);

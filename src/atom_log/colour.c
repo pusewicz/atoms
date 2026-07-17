@@ -2,10 +2,10 @@
  * Amalgamated inside ATOM_LOG_IMPLEMENTATION. Do not compile standalone.
  */
 
-#if defined(_WIN32)
+#ifdef _WIN32
 #include <io.h>
 #include <stdio.h>
-#elif !defined(__EMSCRIPTEN__)
+#elifndef __EMSCRIPTEN__
 #include <unistd.h>
 #endif
 
@@ -18,9 +18,9 @@ static bool atom_log__detect_color(void) {
     return false;
   }
 
-#if defined(__EMSCRIPTEN__)
+#ifdef __EMSCRIPTEN__
   return false;
-#elif defined(_WIN32)
+#elifdef _WIN32
   return _isatty(_fileno(stderr)) != 0;
 #else
   return isatty(STDERR_FILENO) != 0;

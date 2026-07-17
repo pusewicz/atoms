@@ -12,3 +12,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Initial library: column-aligned leveled logging with optional SDL3 backend.
 - Path rewriting for `src/` call sites, ANSI colour (TTY + `NO_COLOR`), fatal abort helper.
 - Amalgamation via `rake dist`; core tests without SDL; optional SDL suite.
+- `ATOM_LOG_COUNTOF` (`_Generic` + `typeof`) for fixed-array length.
+- Tooling: pedantic/`-Werror` CFLAGS, `.editorconfig`, `.clang-format`, `.clang-tidy`.
+
+### Changed
+
+- C23 polish: typed enums, `constexpr`, `nullptr`, `[[noreturn]]` / `[[gnu::format]]`.

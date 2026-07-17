@@ -1,16 +1,12 @@
 # frozen_string_literal: true
 
 require_relative "atoms"
+require_relative "cflags"
 require "rake/clean"
 require "shellwords"
 
 CC = ENV.fetch("CC", "clang")
-CFLAGS = Shellwords.split(
-  ENV.fetch(
-    "CFLAGS",
-    "-std=c23 -Wall -Wextra -Wshadow -g -O0 -Idist -Ithird_party"
-  )
-)
+CFLAGS = Atoms::CFlags.from_env
 LDFLAGS = Shellwords.split(ENV.fetch("LDFLAGS", ""))
 
 CLEAN.include "build"
@@ -28,11 +24,11 @@ def sdl_libs
   `pkg-config --libs sdl3`.split
 end
 
-def compile_and_link(src, bin, extra_cflags: [], extra_ldflags: [])
+def compile_and_link(src, bin, extra_cflags: [], extra_ldflags: [], cflags: CFLAGS)
   Atoms::BUILD.mkpath
   obj = Atoms::BUILD.join("#{bin.basename}.o")
-  sh CC, *CFLAGS, *extra_cflags, "-c", src.to_s, "-o", obj.to_s
-  sh CC, *CFLAGS, obj.to_s, "-o", bin.to_s, *LDFLAGS, *extra_ldflags
+  sh CC, *cflags, *extra_cflags, "-c", src.to_s, "-o", obj.to_s
+  sh CC, *cflags, obj.to_s, "-o", bin.to_s, *LDFLAGS, *extra_ldflags
 end
 
 namespace :test do
@@ -49,21 +45,21 @@ namespace :test do
       end
     end
 
-    if !sdl_tests.empty?
-      desc "Run SDL tests for #{name} (requires SDL3)"
-      task "#{name}:sdl" => "dist:#{name}" do
-        abort "SDL3 not found (pkg-config sdl3)" unless sdl_available?
+    next if sdl_tests.empty?
 
-        sdl_tests.each do |src|
-          bin = Atoms::BUILD.join(src.basename(".c"))
-          compile_and_link(
-            src,
-            bin,
-            extra_cflags: ["-DATOM_LOG_SDL", *sdl_cflags],
-            extra_ldflags: sdl_libs
-          )
-          sh bin.to_s
-        end
+    desc "Run SDL tests for #{name} (requires SDL3)"
+    task "#{name}:sdl" => "dist:#{name}" do
+      abort "SDL3 not found (pkg-config sdl3)" unless sdl_available?
+
+      sdl_tests.each do |src|
+        bin = Atoms::BUILD.join(src.basename(".c"))
+        compile_and_link(
+          src,
+          bin,
+          extra_cflags: ["-DATOM_LOG_SDL", *sdl_cflags],
+          extra_ldflags: sdl_libs
+        )
+        sh bin.to_s
       end
     end
   end
@@ -84,17 +80,17 @@ end
 
 desc "Run tests under ASan+UBSan"
 task :asan do
-  ENV["CFLAGS"] =
-    "#{ENV.fetch('CFLAGS', '-std=c23 -Wall -Wextra -g -O1 -Idist -Ithird_party')} " \
-    "-fsanitize=address,undefined -fno-omit-frame-pointer"
-  ENV["LDFLAGS"] =
-    "#{ENV.fetch('LDFLAGS', '')} -fsanitize=address,undefined"
-  Rake::Task[:test].reenable
+  asan_cflags = Atoms::CFlags.asan
+  asan_ldflags = Shellwords.split(ENV.fetch("LDFLAGS", "")) +
+                 %w[-fsanitize=address,undefined]
   Atoms.libs.each do |name|
-    Rake::Task["test:#{name}"].reenable
-    Rake::Task["dist:#{name}"].reenable
+    Rake::Task["dist:#{name}"].invoke
+    Atoms.lib_dir(name).glob("tests/test_#{name}.c").each do |src|
+      bin = Atoms::BUILD.join("asan_#{src.basename('.c')}")
+      compile_and_link(src, bin, cflags: asan_cflags, extra_ldflags: asan_ldflags)
+      sh bin.to_s
+    end
   end
-  Rake::Task[:test].invoke
 end
 
 namespace :example do

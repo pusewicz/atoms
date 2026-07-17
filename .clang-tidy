@@ -1,0 +1,49 @@
+---
+# First-party C23. third_party/ is -isystem at compile time.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  cert-*,
+  -cert-err33-c,
+  clang-analyzer-*,
+  -clang-analyzer-optin.core.EnumCastOutOfRange,
+  misc-*,
+  -misc-no-recursion,
+  -misc-include-cleaner,
+  modernize-*,
+  -modernize-macro-to-enum,
+  performance-*,
+  portability-*,
+  readability-*,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -readability-function-cognitive-complexity,
+  -readability-uppercase-literal-suffix,
+  -readability-implicit-bool-conversion,
+  -readability-simplify-boolean-expr,
+  -readability-use-concise-preprocessor-directives,
+  -clang-analyzer-core.uninitialized.Assign
+
+WarningsAsErrors: "*"
+HeaderFilterRegex: "^(src|dist)/.*"
+FormatStyle: file
+UseColor: true
+
+CheckOptions:
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case
+  - key: readability-identifier-naming.ConstantCase
+    value: lower_case
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.MacroDefinitionIgnoredRegexp
+    value: "^(atom_log_.*|atom_fatal|log_.*|fatal|ATOM_LOG_.*)$"
+  - key: readability-function-size.LineThreshold
+    value: "200"
+---

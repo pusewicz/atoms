@@ -6,8 +6,9 @@
 
 #include <SDL3/SDL_log.h>
 
-/* RS (record separator): pack call-site across module boundaries via SDL body. */
-static const char atom_log__loc_mark = '\x1e';
+/* RS (record separator): pack call-site across module boundaries via SDL body.
+ */
+static constexpr char atom_log_loc_mark = '\x1e';
 
 static const char* atom_log__category_label(int category) {
   switch (category) {
@@ -38,7 +39,7 @@ static const char* atom_log__category_label(int category) {
   }
 }
 
-static int atom_log__prio_from_sdl(SDL_LogPriority priority) {
+static AtomLogPrio atom_log__prio_from_sdl(SDL_LogPriority priority) {
   switch (priority) {
   case SDL_LOG_PRIORITY_TRACE:
     return ATOM_LOG_PRIO_TRACE;
@@ -78,11 +79,11 @@ static SDL_LogPriority atom_log__sdl_from_level(AtomLogLevel level) {
 
 static bool atom_log__split_marked_body(const char* body, char* loc_out,
                                         size_t loc_n, const char** msg_out) {
-  if (!body || body[0] != atom_log__loc_mark) {
+  if (!body || body[0] != atom_log_loc_mark) {
     return false;
   }
   const char* loc_start = body + 1;
-  const char* sep = strchr(loc_start, atom_log__loc_mark);
+  const char* sep       = strchr(loc_start, atom_log_loc_mark);
   if (!sep) {
     return false;
   }
@@ -92,12 +93,13 @@ static bool atom_log__split_marked_body(const char* body, char* loc_out,
   }
   memcpy(loc_out, loc_start, loc_len);
   loc_out[loc_len] = '\0';
-  *msg_out = sep + 1;
+  *msg_out         = sep + 1;
   return true;
 }
 
 static void atom_log__sdl_output(void* userdata, int category,
-                                 SDL_LogPriority priority, const char* message) {
+                                 SDL_LogPriority priority,
+                                 const char* message) {
   (void)userdata;
   char loc_buf[128];
   const char* text = message ? message : "";
@@ -118,7 +120,7 @@ static void atom_log__sdl_install(void) {
   SDL_SetLogPriorityPrefix(SDL_LOG_PRIORITY_WARN, "");
   SDL_SetLogPriorityPrefix(SDL_LOG_PRIORITY_ERROR, "");
   SDL_SetLogPriorityPrefix(SDL_LOG_PRIORITY_CRITICAL, "");
-  SDL_SetLogOutputFunction(atom_log__sdl_output, NULL);
+  SDL_SetLogOutputFunction(atom_log__sdl_output, nullptr);
 #if !defined(NDEBUG)
   SDL_SetLogPriorities(SDL_LOG_PRIORITY_VERBOSE);
 #endif
@@ -133,8 +135,8 @@ static void atom_log__emit(AtomLogLevel level, const char* file, int line,
   char body[1024];
   atom_log__format_location(loc, sizeof loc, file, line);
   const int written =
-      snprintf(body, sizeof body, "%c%s%c%s", atom_log__loc_mark, loc,
-               atom_log__loc_mark, user_message ? user_message : "");
+      snprintf(body, sizeof body, "%c%s%c%s", atom_log_loc_mark, loc,
+               atom_log_loc_mark, user_message ? user_message : "");
   if (written < 0) {
     body[0] = '\0';
   }
@@ -151,7 +153,7 @@ static void atom_log__emit(AtomLogLevel level, const char* file, int line,
   if ((int)level < (int)g_atom_log_min_level) {
     return;
   }
-  const int prio = atom_log__prio_from_level(level);
+  const AtomLogPrio prio = atom_log__prio_from_level(level);
   char loc[128];
   atom_log__format_location(loc, sizeof loc, file, line);
   atom_log__write_line(g_atom_log_color, prio, loc, user_message,

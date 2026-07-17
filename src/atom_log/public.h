@@ -22,22 +22,29 @@ extern "C" {
 #endif
 
 /**
+ * @brief Compile-time length of a fixed array (rejects decayed pointers).
+ *
+ * Uses C23 @c typeof and @c _Generic so passing a pointer is a type error.
+ */
+#define ATOM_LOG_COUNTOF(arr)                                                  \
+  (_Generic(&(arr), typeof((arr)[0])(*)[]: (sizeof(arr) / sizeof((arr)[0]))))
+
+/**
  * @brief Severity levels for log lines.
  */
-typedef enum AtomLogLevel {
+typedef enum AtomLogLevel : int {
   ATOM_LOG_TRACE = 0,
   ATOM_LOG_DEBUG = 1,
-  ATOM_LOG_INFO = 2,
-  ATOM_LOG_WARN = 3,
+  ATOM_LOG_INFO  = 2,
+  ATOM_LOG_WARN  = 3,
   ATOM_LOG_ERROR = 4,
 } AtomLogLevel;
 
 /**
  * @brief Optional custom line writer.
  *
- * Receives a fully formatted line (without trailing newline) or raw components
- * via the default path. When set, the default writer is replaced; the callback
- * is invoked with the complete formatted line including newline.
+ * When set, replaces the default stderr writer. The callback receives a
+ * complete formatted line including the trailing newline.
  *
  * @param userdata  Pointer passed to atom_log_set_output.
  * @param line      NUL-terminated line including trailing newline.
@@ -65,7 +72,7 @@ ATOM_LOG_API void atom_log_set_level(AtomLogLevel min);
 /**
  * @brief Replace the default stderr writer.
  *
- * @param fn        Callback, or NULL to restore stderr.
+ * @param fn        Callback, or nullptr to restore stderr.
  * @param userdata  Passed to @p fn.
  */
 ATOM_LOG_API void atom_log_set_output(AtomLogOutputFn fn, void* userdata);
@@ -89,12 +96,9 @@ ATOM_LOG_API void atom_log_debug_force_color(bool enabled);
  * @param format  printf-style format string.
  * @param ...     Format arguments.
  */
-ATOM_LOG_API void atom_log_message(AtomLogLevel level, const char* file,
-                                   int line, const char* format, ...)
-#if defined(__GNUC__) || defined(__clang__)
-    __attribute__((format(printf, 4, 5)))
-#endif
-    ;
+[[gnu::format(printf, 4, 5)]] ATOM_LOG_API void
+atom_log_message(AtomLogLevel level, const char* file, int line,
+                 const char* format, ...);
 
 /**
  * @brief Log an unrecoverable error and abort.
@@ -106,14 +110,8 @@ ATOM_LOG_API void atom_log_message(AtomLogLevel level, const char* file,
  * @param format  printf-style format string.
  * @param ...     Format arguments.
  */
-ATOM_LOG_API void atom_log_fatal(const char* file, int line, const char* format,
-                                 ...)
-#if defined(__GNUC__) || defined(__clang__)
-    __attribute__((noreturn, format(printf, 3, 4)))
-#elif defined(_MSC_VER)
-    __declspec(noreturn)
-#endif
-    ;
+[[noreturn, gnu::format(printf, 3, 4)]] ATOM_LOG_API void
+atom_log_fatal(const char* file, int line, const char* format, ...);
 
 /** @brief Log at trace severity. */
 #define atom_log_trace(...)                                                    \

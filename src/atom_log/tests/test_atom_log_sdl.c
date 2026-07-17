@@ -10,12 +10,12 @@
 #define ATOM_LOG_SDL
 #endif
 #define ATOM_LOG_IMPLEMENTATION
-#include "atom_log.h"
-
 #include <SDL3/SDL_log.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "atom_log.h"
 
 static const char k_loc_mark = '\x1e';
 
@@ -37,8 +37,8 @@ static void capture_drop(StderrCapture* c) {
 }
 
 static bool capture_begin(StderrCapture* c) {
-  c->path[0] = '\0';
-  c->tmp_fd = -1;
+  c->path[0]  = '\0';
+  c->tmp_fd   = -1;
   c->saved_fd = -1;
   fflush(stderr);
   snprintf(c->path, sizeof c->path, "build/test_atom_log_sdl_%d.tmp",
@@ -68,7 +68,7 @@ static bool capture_end(StderrCapture* c, char* out, size_t out_n) {
   c->saved_fd = -1;
   close(c->tmp_fd);
   c->tmp_fd = -1;
-  FILE* f = fopen(c->path, "rb");
+  FILE* f   = fopen(c->path, "rb");
   unlink(c->path);
   c->path[0] = '\0';
   if (!f || out_n == 0) {
@@ -93,7 +93,7 @@ static bool capture_log(char* out, size_t out_n, void (*fn)(void)) {
 }
 
 static bool line_contains(const char* line, const char* needle) {
-  return strstr(line, needle) != NULL;
+  return strstr(line, needle) != nullptr;
 }
 
 static void install_logger(void) {
@@ -131,7 +131,7 @@ static void emit_via_sdl(void) {
 
 TEST_CASE(test_init_installs_output_callback) {
   grab_output_fn();
-  REQUIRE(g_log_out != NULL);
+  REQUIRE(g_log_out != nullptr);
   return true;
 }
 
@@ -161,27 +161,23 @@ TEST_CASE(test_category_labels) {
 
 TEST_CASE(test_all_sdl_priority_tags) {
   grab_output_fn();
-  REQUIRE(g_log_out != NULL);
+  REQUIRE(g_log_out != nullptr);
 
   struct {
     SDL_LogPriority priority;
     const char* tag;
   } cases[] = {
-      {SDL_LOG_PRIORITY_TRACE, "TRCE"},
-      {SDL_LOG_PRIORITY_VERBOSE, "VERB"},
-      {SDL_LOG_PRIORITY_DEBUG, "DEBG"},
-      {SDL_LOG_PRIORITY_INFO, "INFO"},
-      {SDL_LOG_PRIORITY_WARN, "WARN"},
-      {SDL_LOG_PRIORITY_ERROR, "ERR "},
-      {SDL_LOG_PRIORITY_CRITICAL, "CRIT"},
-      {(SDL_LogPriority)12345, "????"},
+      {SDL_LOG_PRIORITY_TRACE, "TRCE"},    {SDL_LOG_PRIORITY_VERBOSE, "VERB"},
+      {SDL_LOG_PRIORITY_DEBUG, "DEBG"},    {SDL_LOG_PRIORITY_INFO, "INFO"},
+      {SDL_LOG_PRIORITY_WARN, "WARN"},     {SDL_LOG_PRIORITY_ERROR, "ERR "},
+      {SDL_LOG_PRIORITY_CRITICAL, "CRIT"}, {(SDL_LogPriority)12345, "????"},
   };
 
   for (size_t i = 0; i < sizeof cases / sizeof cases[0]; i++) {
     char out[512];
     g_cb_category = SDL_LOG_CATEGORY_APPLICATION;
     g_cb_priority = cases[i].priority;
-    g_cb_message = "prio";
+    g_cb_message  = "prio";
     REQUIRE(capture_log(out, sizeof out, emit_via_callback));
     REQUIRE(line_contains(out, cases[i].tag));
     REQUIRE(line_contains(out, "prio"));
@@ -198,7 +194,7 @@ TEST_CASE(test_marked_body_splits_location) {
   char out[512];
   g_cb_category = SDL_LOG_CATEGORY_CUSTOM;
   g_cb_priority = SDL_LOG_PRIORITY_INFO;
-  g_cb_message = body;
+  g_cb_message  = body;
   REQUIRE(capture_log(out, sizeof out, emit_via_callback));
   REQUIRE(line_contains(out, "src/game/ui.c:416"));
   REQUIRE(line_contains(out, "hello"));
@@ -214,7 +210,7 @@ TEST_CASE(test_marked_body_missing_second_mark_falls_back) {
   char out[512];
   g_cb_category = SDL_LOG_CATEGORY_GPU;
   g_cb_priority = SDL_LOG_PRIORITY_INFO;
-  g_cb_message = body;
+  g_cb_message  = body;
   REQUIRE(capture_log(out, sizeof out, emit_via_callback));
   REQUIRE(line_contains(out, "gpu"));
   REQUIRE(line_contains(out, "src/game/ui.c:1-no-second"));

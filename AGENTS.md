@@ -16,6 +16,8 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 - `rake release:atom_log` — promote changelog (VERSION unchanged)
 - `rake release:atom_log:bump_next` — VERSION += patch after tagging
 - `rake asan` — sanitizer build + tests
+- `rake format` / `rake format:check` — clang-format
+- `rake tidy` — clang-tidy over core test TUs
 - `rake clean` / `rake clobber`
 
 ## Source vs dist
@@ -50,7 +52,13 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
   scannable optional defines — no long essays.
 - API docs: brief Doxygen on declarations in `public.h`.
 - Zero hard deps in core; optional backends behind feature defines.
-- C23; prefer standard types (`int`, `size_t`, `bool`).
+- **C23, modern and strict:** `nullptr`, `constexpr`, typed enums (`enum E : int`),
+  `[[noreturn]]` / `[[gnu::format]]`, `_Generic` / `typeof` when they clarify
+  types (e.g. `ATOM_LOG_COUNTOF`). Prefer standard types (`int`, `size_t`, `bool`).
+- **Warnings:** tests/examples compile with `-std=c23 -Wall -Wextra -Wpedantic
+  -Werror` plus the curated set in `rakelib/cflags.rb`. `third_party/` is
+  `-isystem`. Run `rake format` / `rake format:check` / `rake tidy`.
+- Style: `.clang-format`, `.clang-tidy`, `.editorconfig` at repo root.
 - License: root `LICENSE` only; SPDX + SHA-pinned URL in banner (no footer dump).
 
 ## Documentation

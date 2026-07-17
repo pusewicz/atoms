@@ -6,6 +6,16 @@
 #define ATOM_LOG_PATH_MARKER "src"
 #endif
 
+/// ASCII fold A–Z → a–z for case-insensitive path marker match.
+static char atom_log__ascii_lower(char c) {
+  const unsigned char uc =
+      _Generic(c, char: (unsigned char)c, default: (unsigned char)c);
+  if (uc >= (unsigned char)'A' && uc <= (unsigned char)'Z') {
+    return (char)(uc - (unsigned char)'A' + (unsigned char)'a');
+  }
+  return c;
+}
+
 /// Prefer a project-relative marker path (default "src/…"); else basename.
 static const char* atom_log__src_relative_path(const char* file) {
   if (!file || !file[0]) {
@@ -13,20 +23,12 @@ static const char* atom_log__src_relative_path(const char* file) {
   }
 
   const char* marker = ATOM_LOG_PATH_MARKER;
-  const size_t mlen = strlen(marker);
+  const size_t mlen  = strlen(marker);
 
   for (const char* p = file; *p; ++p) {
     size_t i = 0;
     for (; i < mlen; ++i) {
-      char a = p[i];
-      char b = marker[i];
-      if (a >= 'A' && a <= 'Z') {
-        a = (char)(a - 'A' + 'a');
-      }
-      if (b >= 'A' && b <= 'Z') {
-        b = (char)(b - 'A' + 'a');
-      }
-      if (a != b) {
+      if (atom_log__ascii_lower(p[i]) != atom_log__ascii_lower(marker[i])) {
         break;
       }
     }
