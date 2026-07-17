@@ -17,13 +17,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Ubuntu 26.04 image: GCC 15.2 (default), Clang 20–22, CMake, Ninja,
+          # pkg-config preinstalled. See:
+          # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2604-Readme.md
           - name: ubuntu-clang
-            os: ubuntu-latest
+            os: ubuntu-26.04
             cc: clang
           - name: ubuntu-gcc
-            os: ubuntu-latest
-            # GCC 14+ understands -std=c23; older GCC needs -std=c2x (probed in rake).
-            cc: gcc-14
+            os: ubuntu-26.04
+            cc: gcc
           - name: macos-clang
             os: macos-latest
             cc: clang
@@ -44,11 +46,14 @@ jobs:
           ruby-version: "3.3"
           bundler-cache: true
 
-      - name: Install compilers (Linux)
+      # ubuntu-26.04 already has gcc 15, clang, cmake, ninja, pkg-config.
+      # Keep a no-op-friendly install for any missing bits after image churn.
+      - name: Ensure Linux build tools
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang gcc-14 pkg-config cmake ninja-build
+          sudo apt-get install -y --no-install-recommends \
+            clang gcc pkg-config cmake ninja-build
 
       - name: Install LLVM (Windows)
         if: runner.os == 'Windows'
