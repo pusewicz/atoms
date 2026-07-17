@@ -83,6 +83,22 @@ module Atoms
       CGI.escapeHTML(s.to_s)
     end
 
+    # Escape HTML and expand Doxygen inline commands (@c word, @p word) to <code>.
+    # Token is a C-ish identifier so trailing punctuation (e.g. "@p fn.") stays outside.
+    def format_doc(text)
+      return "" if text.nil?
+
+      out = +""
+      rest = text.to_s
+      while (m = rest.match(/@(?:c|p)\s+([A-Za-z_]\w*)/))
+        out << h(m.pre_match)
+        out << %(<code>#{h(m[1])}</code>)
+        rest = m.post_match
+      end
+      out << h(rest)
+      out
+    end
+
     # depth: 0 = site root, 1 = lib/, 2 = lib/examples/
     def layout(title, body, sha_display, depth: 0, scripts: [],
                lib_name: nil, lib_version: nil, lib_href: nil,
@@ -347,16 +363,23 @@ module Atoms
         content << %(<article class="symbol" id="#{h(sym.name)}" data-kind="#{h(sym.kind)}">\n)
         content << %(<h3><code>#{h(sym.name)}</code> <span class="kind">#{h(sym.kind)}</span></h3>\n)
         content << Markdown.highlight_c(sym.signature)
-        content << %(<p>#{h(sym.brief)}</p>\n) if sym.brief && !sym.brief.empty?
+        content << %(<p>#{format_doc(sym.brief)}</p>\n) if sym.brief && !sym.brief.empty?
+        if sym.details && !sym.details.empty?
+          content << %(<div class="details">\n)
+          sym.details.each do |para|
+            content << %(<p>#{format_doc(para)}</p>\n)
+          end
+          content << %(</div>\n)
+        end
         if sym.params && !sym.params.empty?
           content << %(<dl class="params">\n)
           sym.params.each do |n, d|
-            content << %(<dt><code>#{h(n)}</code></dt><dd>#{h(d)}</dd>\n)
+            content << %(<dt><code>#{h(n)}</code></dt><dd>#{format_doc(d)}</dd>\n)
           end
           content << %(</dl>\n)
         end
         if sym.returns
-          content << %(<p class="returns"><strong>Returns:</strong> #{h(sym.returns)}</p>\n)
+          content << %(<p class="returns"><strong>Returns:</strong> #{format_doc(sym.returns)}</p>\n)
         end
         content << %(</article>\n)
       end

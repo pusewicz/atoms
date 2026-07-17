@@ -494,6 +494,14 @@ pre.license code {
   border-top: 1px solid var(--border);
 }
 
+.symbol .details {
+  color: var(--muted);
+}
+
+.symbol .details p {
+  margin: 0.4rem 0 0;
+}
+
 .kind {
   font-size: 0.75rem;
   color: var(--muted);

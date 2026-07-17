@@ -4,8 +4,8 @@ require_relative "atoms"
 
 module Atoms
   module DocParse
-    Symbol = Struct.new(:kind, :name, :signature, :brief, :params, :returns,
-                        :line, keyword_init: true)
+    Symbol = Struct.new(:kind, :name, :signature, :brief, :details, :params,
+                        :returns, :line, keyword_init: true)
 
     module_function
 
@@ -23,19 +23,7 @@ module Atoms
           decl, i = read_declaration(lines, i)
           next if decl.strip.empty?
 
-          brief = comment[/@brief\s+(.+?)(?:\s*\*+\/)?\s*$/, 1]&.strip
-          brief = brief&.sub(%r{\s*\*/\s*\z}, "")&.strip
-          if brief.nil? || brief.empty?
-            brief = comment.lines.map(&:strip)
-                           .reject { |l| l.include?("@") || l == "/**" || l == "*/" }
-                           .map { |l| l.sub(%r{\A\*+\s*}, "").sub(%r{\s*\*/\s*\z}, "") }
-                           .reject(&:empty?)
-                           .join(" ")
-                           .strip
-          end
-
-          params = comment.scan(/@param\s+(\S+)\s+(.+)/).map { |n, d| [n, d.strip] }
-          returns = comment[/@return\s+(.+)/, 1]&.strip
+          fields = extract_doc_fields(comment)
 
           kind, sym_name = classify(decl)
           next unless kind && sym_name
@@ -44,9 +32,10 @@ module Atoms
             kind: kind,
             name: sym_name,
             signature: normalize_sig(decl),
-            brief: brief,
-            params: params,
-            returns: returns,
+            brief: fields[:brief],
+            details: fields[:details],
+            params: fields[:params],
+            returns: fields[:returns],
             line: decl_line + 1
           )
         else
@@ -54,6 +43,68 @@ module Atoms
         end
       end
       symbols
+    end
+
+    def extract_doc_fields(comment)
+      body = comment_content_lines(comment)
+      brief = nil
+      details = []
+      params = []
+      returns = nil
+      para = []
+
+      flush_para = lambda do
+        text = para.join(" ").strip
+        details << text unless text.empty?
+        para.clear
+      end
+
+      body.each do |line|
+        if (m = line.match(/\A@brief\s+(.*)\z/))
+          flush_para.call
+          brief = m[1].strip
+        elsif (m = line.match(/\A@details\s*(.*)\z/))
+          flush_para.call
+          para << m[1].strip unless m[1].strip.empty?
+        elsif (m = line.match(/\A@param\s+(\S+)\s+(.*)\z/))
+          flush_para.call
+          params << [m[1], m[2].strip]
+        elsif (m = line.match(/\A@returns?\s+(.*)\z/))
+          flush_para.call
+          returns = m[1].strip
+        elsif line.match?(/\A@\w+/)
+          # Other block tags (@file, @note, …) end free-form text.
+          flush_para.call
+        elsif line.strip.empty?
+          flush_para.call
+        else
+          para << line.strip
+        end
+      end
+      flush_para.call
+
+      # No @brief: first free paragraph becomes the brief (legacy fallback).
+      if (brief.nil? || brief.empty?) && !details.empty?
+        brief = details.shift
+      end
+
+      {
+        brief: brief,
+        details: details,
+        params: params,
+        returns: returns
+      }
+    end
+
+    # Strip Doxygen comment chrome; return one content string per source line.
+    def comment_content_lines(comment)
+      comment.each_line.map do |raw|
+        s = raw.chomp
+        s = s.sub(%r{\A\s*/\*+\s?}, "")
+        s = s.sub(%r{\s*\*/\s*\z}, "")
+        s = s.sub(/\A\s*\*\s?/, "")
+        s
+      end
     end
 
     def read_comment(lines, i)
