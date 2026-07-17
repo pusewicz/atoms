@@ -44,7 +44,7 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 
 - `VERSION` is the version currently in progress (stamped into dist).
 - Every user-visible change adds an `[Unreleased]` bullet in the same change.
-- Release: agent skill **`/release-atom`** (see `.grok/skills/release-atom/`)
+- Release: agent skill **`/release-atom`** (see `.agents/skills/release-atom/`)
   or manual: `rake release:atom_log` → commit → tag `atom_log-v<VERSION>` →
   push tag (CI publishes asset + docs) → `rake release:atom_log:bump_next`.
 
