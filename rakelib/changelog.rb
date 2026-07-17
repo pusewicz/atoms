@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require_relative "atoms"
-require "time"
 
 module Atoms
   module Changelog

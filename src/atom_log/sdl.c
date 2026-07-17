@@ -148,7 +148,14 @@ static void atom_log__sdl_install(void) {}
 
 static void atom_log__emit(AtomLogLevel level, const char* file, int line,
                            const char* user_message) {
-  atom_log__emit_core(level, file, line, user_message);
+  if ((int)level < (int)g_atom_log_min_level) {
+    return;
+  }
+  const int prio = atom_log__prio_from_level(level);
+  char loc[128];
+  atom_log__format_location(loc, sizeof loc, file, line);
+  atom_log__write_line(g_atom_log_color, prio, loc, user_message,
+                       g_atom_log_out_fn, g_atom_log_out_ud);
 }
 
 #endif /* ATOM_LOG_SDL */

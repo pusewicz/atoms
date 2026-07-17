@@ -28,20 +28,7 @@ ATOM_LOG_API void atom_log_debug_force_color(bool enabled) {
   g_atom_log_color = enabled;
 }
 
-static void atom_log__emit_core(AtomLogLevel level, const char* file, int line,
-                                const char* user_message) {
-  if ((int)level < (int)g_atom_log_min_level) {
-    return;
-  }
-  /* Invalid / unknown levels fall back to INFO in the tag helper. */
-  const int prio = atom_log__prio_from_level(level);
-  char loc[128];
-  atom_log__format_location(loc, sizeof loc, file, line);
-  atom_log__write_line(g_atom_log_color, prio, loc, user_message,
-                       g_atom_log_out_fn, g_atom_log_out_ud);
-}
-
-/* Provided by sdl.c when ATOM_LOG_SDL; otherwise a no-op stub below. */
+/* Provided by sdl.c when ATOM_LOG_SDL; otherwise defined at end of sdl.c. */
 static void atom_log__emit(AtomLogLevel level, const char* file, int line,
                            const char* user_message);
 
@@ -50,7 +37,11 @@ ATOM_LOG_API void atom_log_message(AtomLogLevel level, const char* file,
   char message[1024];
   va_list args;
   va_start(args, format);
-  vsnprintf(message, sizeof message, format ? format : "", args);
+  if (format) {
+    vsnprintf(message, sizeof message, format, args);
+  } else {
+    message[0] = '\0';
+  }
   va_end(args);
   atom_log__emit(level, file, line, message);
 }
@@ -60,7 +51,11 @@ ATOM_LOG_API void atom_log_fatal(const char* file, int line, const char* format,
   char message[1024];
   va_list args;
   va_start(args, format);
-  vsnprintf(message, sizeof message, format ? format : "", args);
+  if (format) {
+    vsnprintf(message, sizeof message, format, args);
+  } else {
+    message[0] = '\0';
+  }
   va_end(args);
 
   char loc[128];

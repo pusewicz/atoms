@@ -90,6 +90,7 @@ static void atom_log__format_time(char* out, size_t out_n) {
   snprintf(out, out_n, "%s", "??:??:??.???");
 }
 
+#ifndef ATOM_LOG_SDL
 static int atom_log__prio_from_level(AtomLogLevel level) {
   switch (level) {
   case ATOM_LOG_TRACE:
@@ -106,6 +107,7 @@ static int atom_log__prio_from_level(AtomLogLevel level) {
     return ATOM_LOG_PRIO_INFO;
   }
 }
+#endif
 
 /// Write one column-aligned line to the active output.
 static void atom_log__write_line(bool color, int prio, const char* loc,

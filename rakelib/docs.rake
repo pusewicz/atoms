@@ -2,7 +2,6 @@
 
 require_relative "doc_render"
 require "fileutils"
-require "webrick"
 
 desc "Generate documentation site into build/docs/"
 task :docs do
@@ -32,6 +31,7 @@ namespace :docs do
 
   desc "Serve build/docs on http://127.0.0.1:4000"
   task serve: :docs do
+    require "webrick"
     root = Atoms::DOCS_OUT.to_s
     server = WEBrick::HTTPServer.new(Port: 4000, DocumentRoot: root)
     trap("INT") { server.shutdown }

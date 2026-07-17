@@ -58,9 +58,9 @@ module Atoms
           end
           i += 1
           out << "<pre><code class=\"language-#{h(lang)}\">#{h(code)}</code></pre>\n"
-        elsif line =~ /\A#+\s+(.*)/
-          level = line[/^#+/].length
-          out << "<h#{level}>#{h(Regexp.last_match(1).strip)}</h#{level}>\n"
+        elsif (hm = line.match(/\A(#+)\s+(.*)\z/))
+          level = hm[1].length
+          out << "<h#{level}>#{h(hm[2].strip)}</h#{level}>\n"
           i += 1
         elsif line.strip.empty?
           i += 1

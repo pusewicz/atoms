@@ -6,7 +6,9 @@
 #define PICO_UNIT_IMPLEMENTATION
 #include <pico_unit.h>
 
+#ifndef ATOM_LOG_SDL
 #define ATOM_LOG_SDL
+#endif
 #define ATOM_LOG_IMPLEMENTATION
 #include "atom_log.h"
 
