@@ -19,7 +19,10 @@ Trigger: tag push matching `<lib>-v*` (e.g. `atom_log-v0.1.0`) runs
 
 1. Asserts the tag version equals `src/<lib>/VERSION`
 2. Builds `dist/<lib>.h` and attaches it to a **GitHub Release**
-3. Builds docs and deploys **GitHub Pages**
+3. Calls `docs.yml` to build and deploy **GitHub Pages**
+
+Docs can also be redeployed without a release via **Actions → Docs → Run
+workflow** (`workflow_dispatch` on `docs.yml`).
 
 ## Arguments (`$ARGUMENTS`)
 
@@ -155,7 +158,7 @@ git push origin main
 
 - Tag `LIB-vV`
 - Release URL (assets: `LIB.h`)
-- Docs deploy (Pages) when the release job finishes
+- Docs deploy (Pages) when the release workflow’s docs job finishes
 - New in-progress VERSION after `bump_next`
 - Remind: consumers install via
   `https://github.com/pusewicz/atoms/releases/download/LIB-vV/LIB.h`
