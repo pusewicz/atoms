@@ -13,8 +13,8 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 - `rake example:atom_log` — build and run examples
 - `rake docs` / `rake docs:serve` — local static site only (not run on PR CI)
 - `rake docs:check` — validate symbols/examples without building HTML
-- GitHub Pages is built and deployed **only on library release tags**
-  (`release.yml` after `atom_log-v*`)
+- GitHub Pages: `docs.yml` (manual **Actions → Docs → Run workflow**, or
+  called from `release.yml` on `atom_log-v*` tags). Not on PR/`main` CI.
 - `rake version` / `rake version:check` / `rake version:atom_log:bump[patch]`
 - `rake release:atom_log` — promote changelog (VERSION unchanged)
 - `rake release:atom_log:bump_next` — VERSION += patch after tagging
@@ -67,11 +67,12 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 
 ## Documentation
 
-- API docs generated from `public.h` comments → `rake docs` (local / release only).
+- API docs generated from `public.h` comments → `rake docs` (local or Actions).
 - Markdown via **commonmarker** (cmark-gfm) and **Rouge** (`Gemfile`).
 - Examples in `src/<lib>/examples/`; docs must list and link all of them.
 - Generated docs link back to repo resources at the build commit SHA.
-- **Do not** build or deploy docs from PR/`main` CI — only `release.yml` on tags.
+- **Do not** build or deploy docs from PR/`main` CI — use `docs.yml`
+  (workflow_dispatch) or a library release tag.
 
 ## Testing
 

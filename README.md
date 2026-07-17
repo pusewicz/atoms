@@ -47,15 +47,18 @@ int main(void) {
 ```bash
 bundle install     # rake, commonmarker (GFM), rouge
 bundle exec rake test          # amalgamate + run suites
-bundle exec rake docs          # local static docs (CI does not build these)
+bundle exec rake docs          # local static docs
 bundle exec rake docs:serve    # build + serve at http://127.0.0.1:4000
 bundle exec rake version:check
-# GitHub Pages updates only when a library release tag is pushed
+# GitHub Pages: Actions → Docs → Run workflow, or on library release tags
 ```
 
 **Release an atom** (agent): `/release-atom` or `/release-atom atom_log patch` —
 promotes the changelog, tags `atom_log-vX.Y.Z`, pushes so CI publishes
 `atom_log.h` + docs, then bumps VERSION for continued development.
+
+**Redeploy docs without a release:** GitHub → **Actions** → **Docs** →
+**Run workflow** (deploys `build/docs` from the chosen branch/commit).
 
 ## License
 
