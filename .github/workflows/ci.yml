@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+env:
+  # Pin so Windows devel package URL stays stable.
+  SDL3_VERSION: "3.4.12"
+
 jobs:
   test:
     name: ${{ matrix.name }}
@@ -29,7 +33,7 @@ jobs:
           - name: windows-clang
             os: windows-latest
             cc: clang
-            sdl: false
+            sdl: true
 
     defaults:
       run:
@@ -60,6 +64,33 @@ jobs:
         if: runner.os == 'macOS' && matrix.sdl
         run: brew install sdl3 pkg-config
 
+      # Official VC devel package: headers + x64 import lib + DLL (works with
+      # clang targeting the MSVC ABI on windows-latest).
+      - name: Install SDL3 (Windows)
+        if: runner.os == 'Windows' && matrix.sdl
+        env:
+          VER: ${{ env.SDL3_VERSION }}
+        run: |
+          set -euo pipefail
+          url="https://github.com/libsdl-org/SDL/releases/download/release-${VER}/SDL3-devel-${VER}-VC.zip"
+          curl -fsSL -o "$RUNNER_TEMP/sdl3-vc.zip" "$url"
+          mkdir -p "$RUNNER_TEMP/sdl3"
+          unzip -q "$RUNNER_TEMP/sdl3-vc.zip" -d "$RUNNER_TEMP/sdl3"
+          # Zip root is SDL3-<ver>/
+          prefix="$(find "$RUNNER_TEMP/sdl3" -maxdepth 1 -type d -name 'SDL3-*' | head -1)"
+          test -n "$prefix"
+          test -f "$prefix/include/SDL3/SDL.h" || test -f "$prefix/include/SDL3/SDL_log.h"
+          echo "SDL3_DIR=$prefix" >> "$GITHUB_ENV"
+          # Runtime DLL for test executables (VC layout keeps it under lib/x64)
+          if [[ -d "$prefix/lib/x64" ]]; then
+            echo "$prefix/lib/x64" >> "$GITHUB_PATH"
+          fi
+          if [[ -d "$prefix/lib" ]]; then
+            echo "$prefix/lib" >> "$GITHUB_PATH"
+          fi
+          ls -la "$prefix/include/SDL3" | head
+          ls -la "$prefix/lib/x64" 2>/dev/null || ls -la "$prefix/lib" | head
+
       - name: Show toolchain
         env:
           CC: ${{ matrix.cc }}
@@ -68,6 +99,8 @@ jobs:
           command -v "$CC"
           "$CC" --version
           ruby -v
+          if [[ -n "${SDL3_DIR:-}" ]]; then echo "SDL3_DIR=$SDL3_DIR"; fi
+          pkg-config --modversion sdl3 2>/dev/null || true
 
       - name: version:check
         run: bundle exec rake version:check

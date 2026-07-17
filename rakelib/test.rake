@@ -2,6 +2,7 @@
 
 require_relative "atoms"
 require_relative "cflags"
+require_relative "sdl"
 require "rake/clean"
 require "shellwords"
 require "rbconfig"
@@ -18,19 +19,7 @@ def exe_suffix
 end
 
 def sdl_available?
-  system("pkg-config --exists sdl3", out: File::NULL, err: File::NULL)
-end
-
-def sdl_cflags
-  `pkg-config --cflags sdl3`.split
-rescue StandardError
-  []
-end
-
-def sdl_libs
-  `pkg-config --libs sdl3`.split
-rescue StandardError
-  []
+  Atoms::Sdl.available?
 end
 
 def compile_and_link(src, bin, extra_cflags: [], extra_ldflags: [], cflags: CFLAGS)
@@ -43,7 +32,6 @@ def compile_and_link(src, bin, extra_cflags: [], extra_ldflags: [], cflags: CFLA
 end
 
 def run_bin(bin)
-  # Prefer direct exec so Windows .exe paths work without a Unix shell.
   sh bin.to_s
 end
 
@@ -65,15 +53,21 @@ namespace :test do
 
     desc "Run SDL tests for #{name} (requires SDL3)"
     task "#{name}:sdl" => "dist:#{name}" do
-      abort "SDL3 not found (pkg-config sdl3)" unless sdl_available?
+      unless sdl_available?
+        abort "SDL3 not found (pkg-config sdl3, or set SDL3_DIR / VCPKG_ROOT)"
+      end
+
+      cfg = Atoms::Sdl.config
+      puts "SDL3 via #{cfg.source}"
+      Atoms::Sdl.prepend_bin_to_path!
 
       sdl_tests.each do |src|
         bin = Atoms::BUILD.join("#{src.basename('.c')}#{exe_suffix}")
         compile_and_link(
           src,
           bin,
-          extra_cflags: ["-DATOM_LOG_SDL", *sdl_cflags],
-          extra_ldflags: sdl_libs
+          extra_cflags: ["-DATOM_LOG_SDL", *cfg.cflags],
+          extra_ldflags: cfg.libs
         )
         run_bin(bin)
       end
@@ -84,6 +78,12 @@ end
 desc "Build dist and run all available test suites"
 task :test do
   puts "CC=#{CC}  clangish=#{Atoms::CFlags.clangish?}  host=#{RbConfig::CONFIG['host_os']}"
+  if Atoms::Sdl.available?
+    puts "SDL3: #{Atoms::Sdl.config.source}"
+  else
+    puts "SDL3: not found (SDL suite will be skipped)"
+  end
+
   Atoms.libs.each do |name|
     Rake::Task["test:#{name}"].invoke
     sdl_task = "test:#{name}:sdl"
