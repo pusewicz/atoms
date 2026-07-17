@@ -15,7 +15,9 @@ typedef enum AtomLogPrio : int {
   ATOM_LOG_PRIO_UNKNOWN
 } AtomLogPrio;
 
-static constexpr int atom_log_loc_width = 32;
+/* static const (not constexpr): older Clang/GCC accept -std=c23 but lack
+ * C23 constexpr objects. */
+static const int atom_log_loc_width = 32;
 
 static const char* atom_log__level_tag(AtomLogPrio prio) {
   switch (prio) {

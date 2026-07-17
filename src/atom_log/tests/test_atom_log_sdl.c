@@ -3,6 +3,13 @@
  * @brief SDL backend tests for atom_log (requires ATOM_LOG_SDL + SDL3).
  */
 
+/* Strict -std=c23 hides POSIX APIs unless feature-test macros are set first. */
+#if !defined(_WIN32)
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE 1
+#endif
+#endif
+
 #define PICO_UNIT_IMPLEMENTATION
 #include <pico_unit.h>
 

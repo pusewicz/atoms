@@ -7,8 +7,8 @@
 #include <SDL3/SDL_log.h>
 
 /* RS (record separator): pack call-site across module boundaries via SDL body.
- */
-static constexpr char atom_log_loc_mark = '\x1e';
+ * static const for compilers that lack C23 constexpr objects. */
+static const char atom_log_loc_mark = '\x1e';
 
 static const char* atom_log__category_label(int category) {
   switch (category) {

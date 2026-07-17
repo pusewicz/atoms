@@ -1,6 +1,10 @@
 /**
  * @file host_compat.h
  * @brief Minimal POSIX shims for unit tests (Windows vs Unix).
+ *
+ * Include this only after defining feature-test macros when building with
+ * strict -std=c23 (see test_*.c). On Unix, setenv/fileno need _DEFAULT_SOURCE
+ * (or equivalent) before the first system header is pulled in.
  */
 
 #ifndef ATOM_LOG_TEST_HOST_COMPAT_H
@@ -24,7 +28,7 @@
 #endif
 
 static inline void atom_log_test_setenv(const char* key, const char* val) {
-  /* _putenv_s requires non-null value; empty string clears for our tests. */
+  /* _putenv_s requires non-null value; empty string is fine for our tests. */
   (void)_putenv_s(key, val ? val : "");
 }
 #else
