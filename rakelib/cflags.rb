@@ -81,11 +81,13 @@ module Atoms
     def default
       flags = [c_std_flag, *BASE]
       flags.concat(CLANG_ONLY) if clangish?
-      # MSVC headers are noisy under -Wconversion when using clang targeting
-      # the MSVC ABI; keep pedantic/error but drop conversion on Windows.
+      # Clang-on-Windows uses the MSVC UCRT, which marks getenv/fopen/localtime
+      # as deprecated. We intentionally use the ISO C APIs; silence the CRT
+      # spam so -Werror stays usable. Also drop -Wconversion (noisy vs UCRT).
       if windows?
         flags.delete("-Wconversion")
         flags.delete("-Wno-sign-conversion")
+        flags.unshift("-D_CRT_SECURE_NO_WARNINGS")
       end
       flags
     end
