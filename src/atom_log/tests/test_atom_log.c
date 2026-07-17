@@ -10,9 +10,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "atom_log.h"
+#include "host_compat.h"
 
 /* ---- stderr capture ------------------------------------------------------ */
 
@@ -24,11 +24,11 @@ typedef struct StderrCapture {
 
 static void capture_drop(StderrCapture* c) {
   if (c->tmp_fd >= 0) {
-    close(c->tmp_fd);
+    ATOM_LOG_TEST_CLOSE(c->tmp_fd);
     c->tmp_fd = -1;
   }
   if (c->path[0] != '\0') {
-    unlink(c->path);
+    ATOM_LOG_TEST_UNLINK(c->path);
     c->path[0] = '\0';
   }
 }
@@ -40,26 +40,26 @@ static bool capture_begin(StderrCapture* c) {
   fflush(stderr);
 
   snprintf(c->path, sizeof c->path, "build/test_atom_log_%d.tmp",
-           (int)getpid());
+           (int)ATOM_LOG_TEST_GETPID());
   FILE* f = fopen(c->path, "w+b");
   if (!f) {
     c->path[0] = '\0';
     return false;
   }
-  c->tmp_fd = dup(fileno(f));
+  c->tmp_fd = ATOM_LOG_TEST_DUP(ATOM_LOG_TEST_FILENO(f));
   fclose(f);
   if (c->tmp_fd < 0) {
     capture_drop(c);
     return false;
   }
 
-  c->saved_fd = dup(STDERR_FILENO);
+  c->saved_fd = ATOM_LOG_TEST_DUP(STDERR_FILENO);
   if (c->saved_fd < 0) {
     capture_drop(c);
     return false;
   }
-  if (dup2(c->tmp_fd, STDERR_FILENO) < 0) {
-    close(c->saved_fd);
+  if (ATOM_LOG_TEST_DUP2(c->tmp_fd, STDERR_FILENO) < 0) {
+    ATOM_LOG_TEST_CLOSE(c->saved_fd);
     c->saved_fd = -1;
     capture_drop(c);
     return false;
@@ -69,19 +69,19 @@ static bool capture_begin(StderrCapture* c) {
 
 static bool capture_end(StderrCapture* c, char* out, size_t out_n) {
   fflush(stderr);
-  if (dup2(c->saved_fd, STDERR_FILENO) < 0) {
-    close(c->saved_fd);
+  if (ATOM_LOG_TEST_DUP2(c->saved_fd, STDERR_FILENO) < 0) {
+    ATOM_LOG_TEST_CLOSE(c->saved_fd);
     c->saved_fd = -1;
     capture_drop(c);
     return false;
   }
-  close(c->saved_fd);
+  ATOM_LOG_TEST_CLOSE(c->saved_fd);
   c->saved_fd = -1;
-  close(c->tmp_fd);
+  ATOM_LOG_TEST_CLOSE(c->tmp_fd);
   c->tmp_fd = -1;
 
   FILE* f = fopen(c->path, "rb");
-  unlink(c->path);
+  ATOM_LOG_TEST_UNLINK(c->path);
   c->path[0] = '\0';
   if (!f || out_n == 0) {
     if (f) {
@@ -113,7 +113,7 @@ static void install_logger(void) {
 }
 
 static void fixture_setup(void) {
-  setenv("NO_COLOR", "", 1);
+  atom_log_test_setenv("NO_COLOR", "");
   install_logger();
 }
 
@@ -342,7 +342,7 @@ TEST_CASE(test_long_message_does_not_overflow) {
 }
 
 TEST_CASE(test_no_color_env_disables_ansi) {
-  setenv("NO_COLOR", "1", 1);
+  atom_log_test_setenv("NO_COLOR", "1");
   install_logger();
   char out[512];
   g_emit_level = ATOM_LOG_ERROR;
@@ -355,13 +355,13 @@ TEST_CASE(test_no_color_env_disables_ansi) {
   REQUIRE(line_contains(out, "ERR "));
   REQUIRE(line_contains(out, "nocolor"));
 
-  setenv("NO_COLOR", "", 1);
+  atom_log_test_setenv("NO_COLOR", "");
   install_logger();
   return true;
 }
 
 TEST_CASE(test_color_enabled_emits_ansi_and_reset) {
-  setenv("NO_COLOR", "", 1);
+  atom_log_test_setenv("NO_COLOR", "");
   install_logger();
   atom_log_debug_force_color(true);
 
@@ -382,7 +382,7 @@ TEST_CASE(test_color_enabled_emits_ansi_and_reset) {
 }
 
 TEST_CASE(test_empty_no_color_allows_color_flag) {
-  setenv("NO_COLOR", "", 1);
+  atom_log_test_setenv("NO_COLOR", "");
   install_logger();
   atom_log_debug_force_color(true);
 

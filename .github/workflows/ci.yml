@@ -7,25 +7,72 @@ on:
 
 jobs:
   test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ubuntu-clang
+            os: ubuntu-latest
+            cc: clang
+            sdl: true
+          - name: ubuntu-gcc
+            os: ubuntu-latest
+            cc: gcc
+            sdl: true
+          - name: macos-clang
+            os: macos-latest
+            cc: clang
+            sdl: true
+          # C23 on Windows via LLVM clang (MSVC lacks full C23 / our GNU attrs).
+          - name: windows-clang
+            os: windows-latest
+            cc: clang
+            sdl: false
+
+    defaults:
+      run:
+        shell: bash
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
           bundler-cache: true
+
+      - name: Install LLVM (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install llvm -y --no-progress
+          "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
       - name: Install SDL3 (Linux)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.sdl
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl3-dev pkg-config
+          sudo apt-get install -y libsdl3-dev pkg-config clang gcc
+
       - name: Install SDL3 (macOS)
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && matrix.sdl
         run: brew install sdl3 pkg-config
+
+      - name: Show toolchain
+        env:
+          CC: ${{ matrix.cc }}
+        run: |
+          echo "CC=$CC"
+          command -v "$CC"
+          "$CC" --version
+          ruby -v
+
       - name: version:check
         run: bundle exec rake version:check
+
       - name: test
+        env:
+          CC: ${{ matrix.cc }}
         run: bundle exec rake test

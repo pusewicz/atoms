@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
 require "shellwords"
+require "rbconfig"
 
 module Atoms
   module CFlags
     module_function
 
-    # Curated first-party warning set. Pedantic + Werror always on for tests /
-    # examples so CI and local builds match. third_party is -isystem so
-    # pico_unit stays quiet.
-    DEFAULT = %w[
+    # Shared first-party flags. Pedantic + Werror for tests/examples.
+    # third_party is -isystem so pico_unit stays quiet.
+    BASE = %w[
       -std=c23
       -Wall
       -Wextra
@@ -22,7 +22,6 @@ module Atoms
       -Wmissing-prototypes
       -Wstrict-prototypes
       -Wwrite-strings
-      -Wcomma
       -Wconversion
       -Wno-sign-conversion
       -g
@@ -32,15 +31,39 @@ module Atoms
       third_party
     ].freeze
 
+    # Clang-only extras (unknown to GCC as -Werror).
+    CLANG_ONLY = %w[-Wcomma].freeze
+
+    def cc_name
+      ENV.fetch("CC", "clang")
+    end
+
+    def clangish?
+      base = File.basename(cc_name).sub(/-\d+(\.\d+)*\z/, "")
+      base.match?(/\Aclang(\+\+)?\z/i) || base.match?(/\Aclang-cl\z/i)
+    end
+
+    def windows?
+      RbConfig::CONFIG["host_os"].match?(/mswin|mingw|cygwin/i)
+    end
+
     def default
-      DEFAULT
+      flags = BASE.dup
+      flags.concat(CLANG_ONLY) if clangish?
+      # MSVC headers are noisy under -Wconversion when using clang targeting
+      # the MSVC ABI; keep pedantic/error but drop conversion on Windows.
+      if windows?
+        flags.delete("-Wconversion")
+        flags.delete("-Wno-sign-conversion")
+      end
+      flags
     end
 
     def from_env
       if ENV.key?("CFLAGS")
         Shellwords.split(ENV.fetch("CFLAGS"))
       else
-        default.dup
+        default
       end
     end
 

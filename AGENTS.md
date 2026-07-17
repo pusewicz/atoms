@@ -78,6 +78,9 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 - Always test the amalgamated header (`rake test` ⇒ `dist` first).
 - Core suites must not require SDL or network.
 - Prefer fixing code over weakening assertions.
+- CI matrix: Ubuntu (clang + gcc), macOS (clang), Windows (LLVM clang, core
+  only — no SDL). Set `CC=gcc` / `CC=clang` locally. Windows needs a C23-capable
+  clang (not MSVC).
 
 ## Boundaries
 
