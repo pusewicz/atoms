@@ -169,5 +169,7 @@ git push origin main
 - **Never** force-push tags or rewrite published release commits.
 - **Never** release from a dirty tree or a branch other than `main` unless the
   user explicitly overrides after you warn them.
+- **Never** push non-release changes (e.g. editing/moving this skill file)
+  directly to `main` — open a PR instead.
 - Prefer `bundle exec rake` over bare `rake`.
 - One library per invocation; re-run the skill for another atom.
