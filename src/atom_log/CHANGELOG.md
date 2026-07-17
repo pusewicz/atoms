@@ -7,6 +7,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-17
 ### Added
 
 - Initial library: column-aligned leveled logging with optional SDL3 backend.
