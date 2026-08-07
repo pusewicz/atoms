@@ -19,8 +19,10 @@ a blueprint another agent can execute without guessing.
 - STB pattern: consumer does `#define ATOM_<NAME>_IMPLEMENTATION` in exactly
   one TU. `ATOM_<LIB>_STATIC` switches to static linkage for single-TU embeds.
   Optional short-name defines (`ATOM_<LIB>_SHORT_NAMES`).
-- **Zero hard dependencies in core.** Optional backends live behind feature
-  defines (see `ATOM_LOG_SDL`). Core tests must run without SDL or network.
+- **Zero hard network dependencies.** An atom may declare a hard library
+  dependency instead (e.g. atom_log requires SDL3, declared via
+  `Atoms::SDL_REQUIRED` in `rakelib/atoms.rb`); its test suite may then
+  require that library, but must still not require network.
 - Naming: public `atom_<lib>_…`, internal `atom_<lib>__…`, globals
   `g_atom_<lib>_…`, linkage macro `ATOM_<LIB>_API`.
 - Modern strict C23: `nullptr`, `constexpr`, typed enums, `[[noreturn]]`,
@@ -39,12 +41,12 @@ a blueprint another agent can execute without guessing.
    compile-time configuration via `ATOM_<LIB>_…` defines with sensible
    defaults. Sketch actual `public.h` declarations with brief Doxygen.
 3. Split the implementation into cohesive fragments (like atom_log's
-   `core.c` / `format.c` / `colour.c` / `path.c` / `sdl.c`) and state what
-   lives in each, including `static` state and internal helper seams.
+   `path.c` / `format.c` / `log.c`) and state what lives in each, including
+   `static` state and internal helper seams.
 4. Specify: feature defines and their interactions, error/abort strategy,
    buffer/allocation policy (prefer fixed buffers, no hidden malloc), thread
    / reentrancy stance — stated explicitly either way.
-5. Plan verification: pico_unit suites (core SDL-free; what each asserts),
+5. Plan verification: pico_unit suites (what each asserts; network-free),
    examples (each must be linked from docs), `rake` wiring needs, `asan`
    hotspots, and the `CHANGELOG.md` / `VERSION` / docs impact.
 

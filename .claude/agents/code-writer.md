@@ -38,8 +38,9 @@ amalgamated headers are build products in `dist/` (gitignored).
   standalone. */`. File-scope state is `static` with a `g_atom_<lib>_` prefix.
 - Naming: public symbols `atom_<lib>_…`; internal helpers `atom_<lib>__…`
   (double underscore); linkage via the `ATOM_<LIB>_API` macro.
-- Zero hard dependencies in core; optional backends (e.g. SDL3) live behind
-  feature defines like `ATOM_LOG_SDL`.
+- No network dependency. An atom may declare a hard library dependency
+  instead (e.g. atom_log requires SDL3, via `Atoms::SDL_REQUIRED` in
+  `rakelib/atoms.rb`); its test suite may then require that library.
 - Style is enforced by `.clang-format` / `.clang-tidy` / `.editorconfig`
   (2-space indent, ~80 cols). Use `sizeof buffer` (no parens on objects).
 
@@ -47,8 +48,8 @@ amalgamated headers are build products in `dist/` (gitignored).
 
 1. Read the surrounding code first; mirror its idioms exactly.
 2. Write or extend a pico_unit test in `src/<lib>/tests/` **before or with**
-   the implementation. Core suites must not require SDL or network. Prefer
-   fixing code over weakening assertions.
+   the implementation. Suites must not require network. Prefer fixing code
+   over weakening assertions.
 3. Implement in the appropriate fragment; keep fragments cohesive.
 4. Verify — evidence before claims, run and read the output of:
    - `rake test:<lib>` (amalgamates first automatically)

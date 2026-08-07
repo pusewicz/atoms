@@ -16,7 +16,7 @@ meaningless, and say so):
 
 1. `rake dist` — amalgamation succeeds.
 2. `rake test` — core suites against the amalgamated header (must not need
-   SDL or network). Add `rake test:atom_log:sdl` only if SDL3 is available.
+   network). `rake test:atom_log` needs SDL3 and aborts if it's missing.
 3. `rake format:check` — clang-format clean.
 4. `rake tidy` — clang-tidy over the core test TUs.
 5. `rake docs:check` — public.h symbols and example links validate.

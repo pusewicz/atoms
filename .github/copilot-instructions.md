@@ -14,9 +14,9 @@ release — no CMake.
 - Public API changes must update the Doxygen comments in `src/<lib>/public.h`
   (docs are generated from it), plus examples and `src/<lib>/README.md` when
   relevant.
-- Core code has zero hard dependencies and no network; optional backends live
-  behind feature defines (e.g. `ATOM_LOG_SDL`). Core pico_unit suites must
-  not require SDL.
+- Core code has no network dependency. An atom may declare a hard library
+  dependency instead (e.g. atom_log requires SDL3, via `Atoms::SDL_REQUIRED`
+  in `rakelib/atoms.rb`); its pico_unit suite may then require that library.
 - Prefer fixing code over weakening test assertions.
 
 ## C23 — modern and strict
