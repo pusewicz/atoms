@@ -1,14 +1,16 @@
 # Copilot instructions — atoms
 
 Collection of STB-style single-header **C23** libraries. Modular source lives
-in `src/<lib>/`; amalgamated headers are build products in `dist/`
-(gitignored, published via GitHub Releases). Rake owns dist, tests, docs, and
-release — no CMake.
+in `src/<lib>/`; day-to-day amalgamated headers are build products in
+`build/amalgam/` (gitignored). `dist/<lib>.h` is the committed, released
+header, written only by the release flow and also published via GitHub
+Releases. Rake owns amalgamation, tests, docs, and release — no CMake.
 
 ## Hard rules (flag any violation)
 
-- `dist/` or `build/` files must never appear in a diff; edits belong in
-  `src/<lib>/` only.
+- `build/` files must never appear in a diff; `dist/<lib>.h` may change only
+  in a release commit (written by `rake release:<lib>`, never hand-edited).
+  Edits belong in `src/<lib>/` only.
 - Every user-visible change needs a bullet under `## [Unreleased]` in
   `src/<lib>/CHANGELOG.md` in the same PR (Keep a Changelog format).
 - Public API changes must update the Doxygen comments in `src/<lib>/public.h`

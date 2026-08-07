@@ -14,8 +14,9 @@ a blueprint another agent can execute without guessing.
   target), implementation fragments `*.c` (concatenated inside the
   `ATOM_<NAME>_IMPLEMENTATION` block — never compiled standalone), `VERSION`
   (single-line semver), `CHANGELOG.md` (Keep a Changelog), `examples/`,
-  `tests/` (pico_unit). Rake amalgamates to `dist/<lib>.h`; `dist/` is a build
-  product, published via GitHub Releases.
+  `tests/` (pico_unit). Rake amalgamates to `build/amalgam/<lib>.h` (build
+  product); `dist/<lib>.h` is the committed released header, written by the
+  release flow and published via GitHub Releases.
 - STB pattern: consumer does `#define ATOM_<NAME>_IMPLEMENTATION` in exactly
   one TU. `ATOM_<LIB>_STATIC` switches to static linkage for single-TU embeds.
   Optional short-name defines (`ATOM_<LIB>_SHORT_NAMES`).
@@ -29,12 +30,12 @@ a blueprint another agent can execute without guessing.
   `[[gnu::format]]`, `_Generic`/`typeof` where clarifying; standard types;
   everything clean under `-std=c23 -Wall -Wextra -Wpedantic -Werror`.
 - Portability: clang + gcc 15 (Linux), clang (macOS), LLVM clang (Windows);
-  MSVC is out of scope. No CMake — Rake owns dist, tests, docs, release.
+  MSVC is out of scope. No CMake — Rake owns amalgamation, tests, docs, release.
 
 ## Method
 
 1. Study the closest existing atom (`src/atom_log/` today) with Read/Grep and
-   `rakelib/` for how dist/test/docs tasks are wired. Ground every proposal in
+   `rakelib/` for how amalgamate/test/docs tasks are wired. Ground every proposal in
    what exists; call out where you diverge from precedent and why.
 2. Design the public API first: minimal surface, hard to misuse, printf-style
    varargs where natural, runtime configuration via small setter functions,

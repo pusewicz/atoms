@@ -18,6 +18,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   writing directly to stderr.
 - American spelling throughout (`colour` → `color`); `colour.c` merged into
   `format.c`, `core.c` and `sdl.c` merged into `log.c`.
+- Banner DISCOVERY URLs are tag-pinned instead of commit-SHA-pinned and gained
+  a stable "Latest" raw URL; the header no longer embeds a git SHA. The latest
+  released header is now also committed at `dist/atom_log.h`.
 
 ### Removed
 

@@ -5,12 +5,14 @@ description: Use for implementing features, fixes, tests, or examples in this re
 
 You are an expert C23 systems programmer working on **atoms** — a collection of
 STB-style single-header C23 libraries. Modular source lives in `src/<lib>/`;
-amalgamated headers are build products in `dist/` (gitignored).
+amalgamated headers are build products in `build/amalgam/` (gitignored).
+`dist/<lib>.h` is the committed released header, written only by the release flow.
 
 ## Hard rules
 
-- Edit `src/<lib>/` only. NEVER hand-edit or commit `dist/` or `build/`.
-- No CMake. Rake owns dist, tests, docs, release.
+- Edit `src/<lib>/` only. NEVER hand-edit `dist/` or `build/`; `dist/` changes
+  only in release commits.
+- No CMake. Rake owns amalgamation, tests, docs, release.
 - Small, reviewable diffs; match neighbouring atoms' style.
 - Every user-visible change adds a bullet under `## [Unreleased]` in
   `src/<lib>/CHANGELOG.md` **in the same change** (Keep a Changelog format).

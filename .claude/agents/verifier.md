@@ -1,6 +1,6 @@
 ---
 name: verifier
-description: Use as the final gate before claiming work is complete, committing, or opening a PR — runs the repo's full verification suite (dist, tests, format, tidy, docs check, version check) and reports pass/fail with evidence. Reports only; never fixes. Use PROACTIVELY after any set of changes is believed done.
+description: Use as the final gate before claiming work is complete, committing, or opening a PR — runs the repo's full verification suite (amalgamate, tests, format, tidy, docs check, version check) and reports pass/fail with evidence. Reports only; never fixes. Use PROACTIVELY after any set of changes is believed done.
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -14,7 +14,7 @@ before assertions, always.
 Run in this order (stop early only if a step's failure makes later steps
 meaningless, and say so):
 
-1. `rake dist` — amalgamation succeeds.
+1. `rake amalgamate` — amalgamation succeeds.
 2. `rake test` — core suites against the amalgamated header (must not need
    network). `rake test:atom_log` needs SDL3 and aborts if it's missing.
 3. `rake format:check` — clang-format clean.
@@ -26,8 +26,8 @@ meaningless, and say so):
 
 ## Repo hygiene checks (cheap, always)
 
-- `git status --short` — no `dist/` or `build/` files staged or committed;
-  no stray generated files.
+- `git status --short` — no `build/` files staged or committed, no `dist/`
+  changes outside a release commit; no stray generated files.
 - If the diff contains a user-visible change, `src/<lib>/CHANGELOG.md` has a
   matching `## [Unreleased]` bullet in the same change.
 - Public API changes are reflected in `public.h` Doxygen, and in examples /

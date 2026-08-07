@@ -3,20 +3,22 @@
 ## Project
 
 Collection of STB-style single-header C23 libraries ("atoms"). Modular source
-lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
-(gitignored) and published as GitHub Release assets — never commit `dist/`.
+lives under `src/<lib>/`. Day-to-day amalgamated headers are build products in
+`build/amalgam/` (gitignored). `dist/<lib>.h` is the **committed, released**
+header (latest release; stable raw URL), written only by the release flow and
+also published as a GitHub Release asset.
 
 ## Commands
 
-- `rake dist` / `rake dist:atom_log` — amalgamate headers into `dist/`
+- `rake amalgamate` / `rake amalgamate:atom_log` — amalgamate headers into `build/amalgam/`
 - `rake test` / `rake test:atom_log` (needs SDL3)
 - `rake example:atom_log` — build and run examples
 - `rake docs` / `rake docs:serve` — local static site only (not run on PR CI)
 - `rake docs:check` — validate symbols/examples without building HTML
 - GitHub Pages: `docs.yml` (manual **Actions → Docs → Run workflow**, or
-  called from `release.yml` on `atom_log-v*` tags). Not on PR/`main` CI.
+  called from `release.yml` on `*-v*` tags). Not on PR/`main` CI.
 - `rake version` / `rake version:check` / `rake version:atom_log:bump[patch]`
-- `rake release:atom_log` — promote changelog (VERSION unchanged)
+- `rake release:atom_log` — promote changelog + write released `dist/atom_log.h` (VERSION unchanged)
 - `rake release:atom_log:bump_next` — VERSION += patch after tagging
 - `rake asan` — sanitizer build + tests
 - `rake compile_commands` — clang compile database at repo root (builds tests + examples)
@@ -26,9 +28,11 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 
 ## Source vs dist
 
-- Edit `src/<lib>/` only. Never hand-edit `dist/`.
-- After source changes, tests run `dist` first automatically.
-- Never commit `dist/` or `build/`.
+- Edit `src/<lib>/` only. Never hand-edit `dist/` or `build/`.
+- After source changes, tests run `amalgamate` first automatically.
+- `dist/<lib>.h` is committed, but **only** as part of a release commit
+  (`rake release:<lib>`). Any other diff touching `dist/` is a bug.
+- Never commit `build/`.
 
 ## Layout
 
@@ -43,17 +47,18 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 
 ## Versioning
 
-- `VERSION` is the version currently in progress (stamped into dist).
+- `VERSION` is the version currently in progress (stamped into amalgams).
 - Every user-visible change adds an `[Unreleased]` bullet in the same change.
-- Release: agent skill **`/release-atom`** (see `.agents/skills/release-atom/`)
-  or manual: `rake release:atom_log` → commit → tag `atom_log-v<VERSION>` →
-  push tag (CI publishes asset + docs) → `rake release:atom_log:bump_next`.
+- Release: agent skill **`/release-atom`** (see `.claude/skills/release-atom/`)
+  or manual: `rake release:atom_log` → commit changelog + VERSION +
+  `dist/atom_log.h` → tag `atom_log-v<VERSION>` → push tag (CI verifies the
+  committed header, publishes asset + docs) → `rake release:atom_log:bump_next`.
 
 ## Single-header conventions
 
 - STB pattern: `#define ATOM_<NAME>_IMPLEMENTATION` in exactly one TU.
 - Public symbols prefixed `atom_<name>_…`; optional short-name defines.
-- Banner: version, copyright, SPDX, tiny usage, DISCOVERY URLs (SHA-pinned),
+- Banner: version, copyright, SPDX, tiny usage, DISCOVERY URLs (tag-pinned),
   scannable optional defines — no long essays.
 - API docs: brief Doxygen on declarations in `public.h`.
 - Keep dependencies minimal; an atom may declare a hard dependency when its domain demands it (atom_log requires SDL3). Optional extras stay behind feature defines.
@@ -64,7 +69,7 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
   -Werror` plus the curated set in `rakelib/cflags.rb`. `third_party/` is
   `-isystem`. Run `rake format` / `rake format:check` / `rake tidy`.
 - Style: `.clang-format`, `.clang-tidy`, `.editorconfig` at repo root.
-- License: root `LICENSE` only; SPDX + SHA-pinned URL in banner (no footer dump).
+- License: root `LICENSE` only; SPDX + tag-pinned URL in banner (no footer dump).
 
 ## Documentation
 
@@ -78,7 +83,7 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 ## Testing
 
 - Framework: pico_unit (`third_party/pico_unit.h`).
-- Always test the amalgamated header (`rake test` ⇒ `dist` first).
+- Always test the amalgamated header (`rake test` ⇒ `amalgamate` first).
 - Suites must not require network. atom_log's suite requires SDL3 (CI installs it on every job; declared via `Atoms::SDL_REQUIRED`).
 - Prefer fixing code over weakening assertions.
 - CI matrix: **ubuntu-26.04** (clang + gcc 15), macOS (clang), Windows (LLVM
@@ -88,6 +93,6 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 
 ## Boundaries
 
-- No CMake unless explicitly requested; Rake owns dist, tests, docs, release.
+- No CMake unless explicitly requested; Rake owns amalgamation, tests, docs, release.
 - Do not wire consumer games (e.g. Space Delivery) unless asked.
 - Prefer small, reviewable diffs; match neighbouring atoms' style.

@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "atom_log-v*"
+      - "*-v*"
 
 permissions:
   contents: write
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   release:
-    # Match CI: 26.04 has a modern toolchain. Dist does not need SDL3.
+    # Match CI: 26.04 has a modern toolchain. Amalgamation does not need SDL3.
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v5
@@ -33,8 +33,14 @@ jobs:
           fi
           echo "lib=$LIB" >> "$GITHUB_OUTPUT"
           echo "ver=$VER" >> "$GITHUB_OUTPUT"
-      - name: Build dist
-        run: bundle exec rake "dist:${{ steps.meta.outputs.lib }}"
+      - name: Verify committed header matches source
+        run: |
+          bundle exec rake "amalgamate:${{ steps.meta.outputs.lib }}"
+          if ! diff -u "dist/${{ steps.meta.outputs.lib }}.h" "build/amalgam/${{ steps.meta.outputs.lib }}.h"; then
+            echo "dist/${{ steps.meta.outputs.lib }}.h does not match a fresh amalgamation at this tag."
+            echo "Re-run 'rake release:${{ steps.meta.outputs.lib }}' and commit the regenerated header."
+            exit 1
+          fi
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
