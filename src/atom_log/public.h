@@ -50,9 +50,11 @@ typedef void (*AtomLogOutputFn)(void* userdata, const char* line);
  * SDL_SetLogOutputFunction, and resets the minimum level to
  * ATOM_LOG_TRACE. Call once at startup, before atom_log_set_level.
  *
- * atom_log_init must be called before any other atom_log function: output
- * emitted before it is unfiltered, unformatted, and bypasses
- * atom_log_set_output.
+ * atom_log_init must be called before any other atom_log function. Until it
+ * runs, lines go through SDL's default log output: anything below
+ * ATOM_LOG_ERROR is dropped by SDL's default priority for the log category,
+ * lines that do print carry atom_log's internal location markers as raw
+ * control bytes, and atom_log_set_output is bypassed.
  */
 ATOM_LOG_API void atom_log_init(void);
 
