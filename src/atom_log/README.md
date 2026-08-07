@@ -24,7 +24,7 @@ int main(void) {
 }
 ```
 
-Install the latest released header from [`dist/atom_log.h`](../../dist/atom_log.h) (raw URL: `https://raw.githubusercontent.com/pusewicz/atoms/main/dist/atom_log.h`), pin a version via a [GitHub Release](https://github.com/pusewicz/atoms/releases), or build locally with `rake amalgamate` → `build/amalgam/atom_log.h`.
+Install the latest released header from [`dist/atom_log.h`](https://github.com/pusewicz/atoms/blob/main/dist/atom_log.h) (raw URL: `https://raw.githubusercontent.com/pusewicz/atoms/main/dist/atom_log.h`), pin a version via a [GitHub Release](https://github.com/pusewicz/atoms/releases), or build locally with `rake amalgamate` → `build/amalgam/atom_log.h`.
 
 ## Optional defines
 
