@@ -7,6 +7,18 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** SDL3 is now a required dependency; the logger is a thin
+  wrapper over SDL's log system and the `ATOM_LOG_SDL` define is gone.
+- **Breaking:** `atom_log_set_level` delegates to SDL
+  (`SDL_SetLogPriority` on the custom log category). Call it after
+  `atom_log_init`, which resets the minimum level to trace.
+- `atom_log_fatal` now routes through SDL at CRITICAL priority instead of
+  writing directly to stderr.
+- American spelling throughout (`colour` → `color`); `colour.c` merged into
+  `format.c`, `core.c` and `sdl.c` merged into `log.c`.
+
 ## [0.1.1] - 2026-07-18
 ### Added
 

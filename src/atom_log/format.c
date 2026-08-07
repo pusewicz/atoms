@@ -1,8 +1,35 @@
-/* format.c — time column, level tags, line writer.
+/* format.c — time column, level tags, color detection, line writer.
  * Amalgamated inside ATOM_LOG_IMPLEMENTATION. Do not compile standalone.
  */
 
 #include <time.h>
+
+#ifdef _WIN32
+#include <io.h>
+#include <stdio.h>
+#elifndef __EMSCRIPTEN__
+#include <unistd.h>
+#endif
+
+/* TTY / NO_COLOR detection. */
+static bool atom_log__detect_color(void) {
+#ifdef ATOM_LOG_NO_COLOR
+  return false;
+#else
+  const char* no_color = getenv("NO_COLOR");
+  if (no_color && no_color[0] != '\0') {
+    return false;
+  }
+
+#ifdef __EMSCRIPTEN__
+  return false;
+#elifdef _WIN32
+  return _isatty(_fileno(stderr)) != 0;
+#else
+  return isatty(STDERR_FILENO) != 0;
+#endif
+#endif
+}
 
 typedef enum AtomLogPrio : int {
   ATOM_LOG_PRIO_TRACE = 0,
@@ -93,25 +120,6 @@ static void atom_log__format_time(char* out, size_t out_n) {
 #endif
   snprintf(out, out_n, "%s", "??:??:??.???");
 }
-
-#ifndef ATOM_LOG_SDL
-static AtomLogPrio atom_log__prio_from_level(AtomLogLevel level) {
-  switch (level) {
-  case ATOM_LOG_TRACE:
-    return ATOM_LOG_PRIO_TRACE;
-  case ATOM_LOG_DEBUG:
-    return ATOM_LOG_PRIO_DEBUG;
-  case ATOM_LOG_INFO:
-    return ATOM_LOG_PRIO_INFO;
-  case ATOM_LOG_WARN:
-    return ATOM_LOG_PRIO_WARN;
-  case ATOM_LOG_ERROR:
-    return ATOM_LOG_PRIO_ERROR;
-  default:
-    return ATOM_LOG_PRIO_INFO;
-  }
-}
-#endif
 
 /* Write one column-aligned "time  tag  location  message" line to the active
  * output. */

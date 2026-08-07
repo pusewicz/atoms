@@ -1,10 +1,12 @@
-/* sdl.c — optional SDL3 log backend + RS location packing.
+/* log.c — public API entry points and the SDL3 log bridge.
  * Amalgamated inside ATOM_LOG_IMPLEMENTATION. Do not compile standalone.
  */
 
-#ifdef ATOM_LOG_SDL
-
 #include <SDL3/SDL_log.h>
+
+static bool g_atom_log_color;
+static AtomLogOutputFn g_atom_log_out_fn;
+static void* g_atom_log_out_ud;
 
 /* ASCII record separator. atom_log__emit packs "<RS>location<RS>message" into
  * the SDL message body so the call site survives SDL's log pipeline.
@@ -114,20 +116,18 @@ static void atom_log__sdl_output(void* userdata, int category,
                        loc_buf, text, g_atom_log_out_fn, g_atom_log_out_ud);
 }
 
-static void atom_log__sdl_install(void) {
-  for (int p = SDL_LOG_PRIORITY_TRACE; p < SDL_LOG_PRIORITY_COUNT; ++p) {
-    SDL_SetLogPriorityPrefix((SDL_LogPriority)p, "");
+static void atom_log__vformat(char* out, size_t out_n, const char* format,
+                              va_list args) {
+  if (format) {
+    vsnprintf(out, out_n, format, args);
+  } else {
+    out[0] = '\0';
   }
-  SDL_SetLogOutputFunction(atom_log__sdl_output, nullptr);
-#if !defined(NDEBUG)
-  SDL_SetLogPriorities(SDL_LOG_PRIORITY_VERBOSE);
-#endif
-  /* atom_log emits through the custom category; SDL's default priority for it
-   * (ERROR) would drop lower levels. atom_log_set_level remains the filter. */
-  SDL_SetLogPriority(SDL_LOG_CATEGORY_CUSTOM, SDL_LOG_PRIORITY_TRACE);
 }
 
-static void atom_log__emit(AtomLogLevel level, const char* file, int line,
+/* Pack the call site into the SDL message body; the installed output
+ * callback unpacks and renders it. */
+static void atom_log__emit(SDL_LogPriority priority, const char* file, int line,
                            const char* user_message) {
   char loc[128];
   /* Sized so the location prefix and a full 1023-byte message both fit. */
@@ -139,21 +139,53 @@ static void atom_log__emit(AtomLogLevel level, const char* file, int line,
   if (written < 0) {
     body[0] = '\0';
   }
-  SDL_LogMessage(SDL_LOG_CATEGORY_CUSTOM, atom_log__sdl_from_level(level), "%s",
-                 body);
+  SDL_LogMessage(SDL_LOG_CATEGORY_CUSTOM, priority, "%s", body);
 }
 
-#else /* !ATOM_LOG_SDL */
-
-static void atom_log__sdl_install(void) {}
-
-static void atom_log__emit(AtomLogLevel level, const char* file, int line,
-                           const char* user_message) {
-  const AtomLogPrio prio = atom_log__prio_from_level(level);
-  char loc[128];
-  atom_log__format_location(loc, sizeof loc, file, line);
-  atom_log__write_line(g_atom_log_color, prio, loc, user_message,
-                       g_atom_log_out_fn, g_atom_log_out_ud);
+ATOM_LOG_API void atom_log_init(void) {
+  g_atom_log_color = atom_log__detect_color();
+  for (int p = SDL_LOG_PRIORITY_TRACE; p < SDL_LOG_PRIORITY_COUNT; ++p) {
+    SDL_SetLogPriorityPrefix((SDL_LogPriority)p, "");
+  }
+  SDL_SetLogOutputFunction(atom_log__sdl_output, nullptr);
+#if !defined(NDEBUG)
+  SDL_SetLogPriorities(SDL_LOG_PRIORITY_VERBOSE);
+#endif
+  /* atom_log emits through the custom category; SDL's default priority for
+   * it would drop lower levels. atom_log_set_level remains the filter. */
+  SDL_SetLogPriority(SDL_LOG_CATEGORY_CUSTOM, SDL_LOG_PRIORITY_TRACE);
 }
 
-#endif /* ATOM_LOG_SDL */
+ATOM_LOG_API void atom_log_set_level(AtomLogLevel min) {
+  SDL_SetLogPriority(SDL_LOG_CATEGORY_CUSTOM, atom_log__sdl_from_level(min));
+}
+
+ATOM_LOG_API void atom_log_set_output(AtomLogOutputFn fn, void* userdata) {
+  g_atom_log_out_fn = fn;
+  g_atom_log_out_ud = userdata;
+}
+
+ATOM_LOG_API void atom_log_debug_force_color(bool enabled) {
+  g_atom_log_color = enabled;
+}
+
+ATOM_LOG_API void atom_log_message(AtomLogLevel level, const char* file,
+                                   int line, const char* format, ...) {
+  char message[1024];
+  va_list args;
+  va_start(args, format);
+  atom_log__vformat(message, sizeof message, format, args);
+  va_end(args);
+  atom_log__emit(atom_log__sdl_from_level(level), file, line, message);
+}
+
+ATOM_LOG_API void atom_log_fatal(const char* file, int line, const char* format,
+                                 ...) {
+  char message[1024];
+  va_list args;
+  va_start(args, format);
+  atom_log__vformat(message, sizeof message, format, args);
+  va_end(args);
+  atom_log__emit(SDL_LOG_PRIORITY_CRITICAL, file, line, message);
+  abort();
+}
