@@ -11,15 +11,13 @@ module Atoms
       "atom_log" => %w[path.c format.c log.c]
     }.freeze
 
-    def build(name)
+    def build(name, out_dir: Atoms::AMALGAM)
       dir = Atoms.lib_dir(name)
       raise "unknown library: #{name}" unless dir.directory?
 
       version = Atoms.version(name)
-      sha = Atoms.git_sha
       banner = dir.join("banner.h.in").read
                   .gsub("{{VERSION}}", version)
-                  .gsub("{{GIT_SHA}}", sha)
 
       public_h = dir.join("public.h").read
 
@@ -57,8 +55,8 @@ module Atoms
       out << "\n#endif /* #{impl_macro} */\n"
       out << "\n#endif /* #{guard} */\n"
 
-      Atoms::DIST.mkpath
-      target = Atoms::DIST.join("#{name}.h")
+      out_dir.mkpath
+      target = out_dir.join("#{name}.h")
       target.write(out)
       target
     end

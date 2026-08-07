@@ -7,9 +7,11 @@ module Atoms
   SRC = ROOT.join("src")
   DIST = ROOT.join("dist")
   BUILD = ROOT.join("build")
+  AMALGAM = BUILD.join("amalgam")
   SITE = ROOT.join("site")
   DOCS_OUT = BUILD.join("docs")
   GITHUB = "https://github.com/pusewicz/atoms"
+  RAW = "https://raw.githubusercontent.com/pusewicz/atoms"
 
   # Atoms with a hard SDL3 dependency (tests, examples, and tidy link SDL3).
   SDL_REQUIRED = %w[atom_log].freeze

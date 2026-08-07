@@ -27,7 +27,7 @@ module Atoms
       -Wno-sign-conversion
       -g
       -O0
-      -Idist
+      -Ibuild/amalgam
       -isystem
       third_party
     ].freeze
