@@ -26,8 +26,10 @@ severity, each anchored to `file:line` with a concrete failure scenario.
    header-only decl and single implementation TU (`ATOM_<LIB>_STATIC` respected).
 3. **Portability** — must build with clang + gcc 15 (Linux), clang (macOS),
    LLVM clang (Windows; MSVC unsupported). Flag non-portable extensions beyond
-   the sanctioned attributes; core must have zero hard deps (SDL only behind
-   `ATOM_LOG_SDL`-style defines) and no network.
+   the sanctioned attributes; no network dependency. An atom may declare a
+   hard library dependency instead (e.g. atom_log requires SDL3, via
+   `Atoms::SDL_REQUIRED` in `rakelib/atoms.rb`); its test suite may then
+   require that library.
 4. **C23 modernity** — flag `NULL` instead of `nullptr`, untyped enums,
    `#define` constants where `constexpr` fits, missing `[[noreturn]]` /
    `[[gnu::format]]` on qualifying functions, pre-C23 idioms with a clearly
@@ -36,9 +38,10 @@ severity, each anchored to `file:line` with a concrete failure scenario.
    -Werror` plus `rakelib/cflags.rb`; spot anything that won't.
 6. **Conventions & completeness** — public API declared in `public.h` with
    brief Doxygen on every declaration; naming prefixes respected; pico_unit
-   test added/updated in `src/<lib>/tests/` (core suite SDL-free); assertions
-   not weakened to make tests pass; `CHANGELOG.md` has an `[Unreleased]`
-   bullet for user-visible changes; examples and `README.md` updated when the
+   test added/updated in `src/<lib>/tests/` (suite must not require
+   network); assertions not weakened to make tests pass; `CHANGELOG.md` has
+   an `[Unreleased]` bullet for user-visible changes; examples and
+   `README.md` updated when the
    public API changed.
 
 ## Verification

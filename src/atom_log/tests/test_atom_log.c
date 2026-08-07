@@ -1,6 +1,6 @@
 /**
  * @file test_atom_log.c
- * @brief Core unit tests for atom_log (zero-dep, no SDL).
+ * @brief atom_log test suite (requires SDL3).
  */
 
 /* Strict -std=c23 hides POSIX APIs unless feature-test macros are set first. */
@@ -14,6 +14,7 @@
 #include <pico_unit.h>
 
 #define ATOM_LOG_IMPLEMENTATION
+#include <SDL3/SDL_log.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -115,6 +116,7 @@ static bool capture_log(char* out, size_t out_n, void (*fn)(void)) {
 
 static void install_logger(void) {
   atom_log_init();
+  SDL_SetLogPriorities(SDL_LOG_PRIORITY_TRACE);
   atom_log_set_level(ATOM_LOG_TRACE);
   atom_log_debug_force_color(false);
 }
@@ -434,6 +436,153 @@ TEST_CASE(test_warn_has_no_sdl_style_prefix) {
   return true;
 }
 
+/* ---- SDL bridge ---------------------------------------------------------- */
+
+static const char k_loc_mark = '\x1e';
+
+static SDL_LogOutputFunction g_log_out;
+static void* g_log_ud;
+static int g_cb_category;
+static SDL_LogPriority g_cb_priority;
+static const char* g_cb_message;
+
+static void grab_output_fn(void) {
+  SDL_GetLogOutputFunction(&g_log_out, &g_log_ud);
+}
+
+static void emit_via_callback(void) {
+  g_log_out(g_log_ud, g_cb_category, g_cb_priority, g_cb_message);
+}
+
+static void emit_via_sdl(void) {
+  SDL_LogMessage(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO, "%s",
+                 g_cb_message);
+}
+
+TEST_CASE(test_init_installs_output_callback) {
+  grab_output_fn();
+  REQUIRE(g_log_out != nullptr);
+  return true;
+}
+
+TEST_CASE(test_set_level_delegates_to_sdl_priority) {
+  atom_log_set_level(ATOM_LOG_WARN);
+  REQUIRE(SDL_GetLogPriority(SDL_LOG_CATEGORY_CUSTOM) == SDL_LOG_PRIORITY_WARN);
+  atom_log_set_level(ATOM_LOG_TRACE);
+  REQUIRE(SDL_GetLogPriority(SDL_LOG_CATEGORY_CUSTOM) ==
+          SDL_LOG_PRIORITY_TRACE);
+  return true;
+}
+
+static void emit_trace_via_api(void) {
+  atom_log_message(ATOM_LOG_TRACE, "src/game/ui.c", 5, "trace-through");
+}
+
+/* init alone must let every atom_log level through; SDL's default priority
+ * for the custom category would otherwise drop lines below ERROR. */
+TEST_CASE(test_init_passes_trace_without_manual_sdl_priorities) {
+  SDL_ResetLogPriorities();
+  atom_log_init();
+  atom_log_debug_force_color(false);
+
+  char out[512];
+  REQUIRE(capture_log(out, sizeof out, emit_trace_via_api));
+  REQUIRE(line_contains(out, "TRCE"));
+  REQUIRE(line_contains(out, "trace-through"));
+  return true;
+}
+
+TEST_CASE(test_category_labels) {
+  struct {
+    int category;
+    const char* label;
+  } cases[] = {
+      {SDL_LOG_CATEGORY_APPLICATION, "app"},
+      {SDL_LOG_CATEGORY_ERROR, "error"},
+      {SDL_LOG_CATEGORY_GPU, "gpu"},
+      {SDL_LOG_CATEGORY_CUSTOM, "game"},
+      {9999, "sdl"},
+  };
+
+  for (size_t i = 0; i < countof(cases); i++) {
+    char out[512];
+    StderrCapture cap;
+    REQUIRE(capture_begin(&cap));
+    SDL_LogMessage(cases[i].category, SDL_LOG_PRIORITY_INFO, "cat-msg");
+    REQUIRE(capture_end(&cap, out, sizeof out));
+    REQUIRE(line_contains(out, cases[i].label));
+    REQUIRE(line_contains(out, "cat-msg"));
+  }
+  return true;
+}
+
+TEST_CASE(test_all_sdl_priority_tags) {
+  grab_output_fn();
+  REQUIRE(g_log_out != nullptr);
+
+  struct {
+    SDL_LogPriority priority;
+    const char* tag;
+  } cases[] = {
+      {SDL_LOG_PRIORITY_TRACE, "TRCE"},    {SDL_LOG_PRIORITY_VERBOSE, "VERB"},
+      {SDL_LOG_PRIORITY_DEBUG, "DEBG"},    {SDL_LOG_PRIORITY_INFO, "INFO"},
+      {SDL_LOG_PRIORITY_WARN, "WARN"},     {SDL_LOG_PRIORITY_ERROR, "ERR "},
+      {SDL_LOG_PRIORITY_CRITICAL, "CRIT"}, {(SDL_LogPriority)12345, "????"},
+  };
+
+  for (size_t i = 0; i < countof(cases); i++) {
+    char out[512];
+    g_cb_category = SDL_LOG_CATEGORY_APPLICATION;
+    g_cb_priority = cases[i].priority;
+    g_cb_message  = "prio";
+    REQUIRE(capture_log(out, sizeof out, emit_via_callback));
+    REQUIRE(line_contains(out, cases[i].tag));
+    REQUIRE(line_contains(out, "prio"));
+  }
+  return true;
+}
+
+TEST_CASE(test_marked_body_splits_location) {
+  grab_output_fn();
+  char body[256];
+  snprintf(body, sizeof body, "%csrc/game/ui.c:416%chello", k_loc_mark,
+           k_loc_mark);
+
+  char out[512];
+  g_cb_category = SDL_LOG_CATEGORY_CUSTOM;
+  g_cb_priority = SDL_LOG_PRIORITY_INFO;
+  g_cb_message  = body;
+  REQUIRE(capture_log(out, sizeof out, emit_via_callback));
+  REQUIRE(line_contains(out, "src/game/ui.c:416"));
+  REQUIRE(line_contains(out, "hello"));
+  REQUIRE(!line_contains(out, "  game  "));
+  return true;
+}
+
+TEST_CASE(test_marked_body_missing_second_mark_falls_back) {
+  grab_output_fn();
+  char body[128];
+  snprintf(body, sizeof body, "%csrc/game/ui.c:1-no-second", k_loc_mark);
+
+  char out[512];
+  g_cb_category = SDL_LOG_CATEGORY_GPU;
+  g_cb_priority = SDL_LOG_PRIORITY_INFO;
+  g_cb_message  = body;
+  REQUIRE(capture_log(out, sizeof out, emit_via_callback));
+  REQUIRE(line_contains(out, "gpu"));
+  REQUIRE(line_contains(out, "src/game/ui.c:1-no-second"));
+  return true;
+}
+
+TEST_CASE(test_unmarked_body_uses_category) {
+  char out[512];
+  g_cb_message = "plain sdl line";
+  REQUIRE(capture_log(out, sizeof out, emit_via_sdl));
+  REQUIRE(line_contains(out, "app"));
+  REQUIRE(line_contains(out, "plain sdl line"));
+  return true;
+}
+
 static TEST_SUITE(suite_atom_log) {
   RUN_TEST_CASE(test_log_level_tags);
   RUN_TEST_CASE(test_log_level_invalid_falls_back_to_info);
@@ -452,6 +601,14 @@ static TEST_SUITE(suite_atom_log) {
   RUN_TEST_CASE(test_color_enabled_emits_ansi_and_reset);
   RUN_TEST_CASE(test_empty_no_color_allows_color_flag);
   RUN_TEST_CASE(test_warn_has_no_sdl_style_prefix);
+  RUN_TEST_CASE(test_init_installs_output_callback);
+  RUN_TEST_CASE(test_set_level_delegates_to_sdl_priority);
+  RUN_TEST_CASE(test_init_passes_trace_without_manual_sdl_priorities);
+  RUN_TEST_CASE(test_category_labels);
+  RUN_TEST_CASE(test_all_sdl_priority_tags);
+  RUN_TEST_CASE(test_marked_body_splits_location);
+  RUN_TEST_CASE(test_marked_body_missing_second_mark_falls_back);
+  RUN_TEST_CASE(test_unmarked_body_uses_category);
 }
 
 int main(void) {

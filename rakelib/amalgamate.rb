@@ -8,7 +8,7 @@ module Atoms
 
     # Fixed impl order per library.
     IMPL_ORDER = {
-      "atom_log" => %w[path.c colour.c format.c core.c sdl.c]
+      "atom_log" => %w[path.c format.c log.c]
     }.freeze
 
     def build(name)

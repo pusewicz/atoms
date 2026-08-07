@@ -45,16 +45,25 @@ typedef void (*AtomLogOutputFn)(void* userdata, const char* line);
 /**
  * @brief Configure logging for the process.
  *
- * Detects colour support (TTY and the NO_COLOR environment variable) and,
- * when ATOM_LOG_SDL is defined, installs the SDL log output backend. Call
- * once at startup.
+ * Detects color support (TTY and the NO_COLOR environment variable),
+ * clears SDL's log prefixes, installs atom_log's line formatter via
+ * SDL_SetLogOutputFunction, and resets the minimum level to
+ * ATOM_LOG_TRACE. Call once at startup, before atom_log_set_level.
+ *
+ * atom_log_init must be called before any other atom_log function. Until it
+ * runs, lines go through SDL's default log output: anything below
+ * ATOM_LOG_ERROR is dropped by SDL's default priority for the log category,
+ * lines that do print carry atom_log's internal location markers as raw
+ * control bytes, and atom_log_set_output is bypassed.
  */
 ATOM_LOG_API void atom_log_init(void);
 
 /**
  * @brief Set the minimum level that will be emitted (inclusive).
  *
- * Lines below @p min are discarded. Default is ATOM_LOG_TRACE.
+ * Delegates to SDL_SetLogPriority for atom_log's SDL log category. Lines
+ * below @p min are discarded. Call after atom_log_init, which resets the
+ * minimum to ATOM_LOG_TRACE.
  *
  * @param min  Minimum severity to emit.
  */
@@ -69,11 +78,11 @@ ATOM_LOG_API void atom_log_set_level(AtomLogLevel min);
 ATOM_LOG_API void atom_log_set_output(AtomLogOutputFn fn, void* userdata);
 
 /**
- * @brief Force ANSI colour on or off.
+ * @brief Force ANSI color on or off.
  *
  * Overrides the detection done by atom_log_init. Intended for tests.
  *
- * @param enabled  true to emit colour escape sequences.
+ * @param enabled  true to emit color escape sequences.
  */
 ATOM_LOG_API void atom_log_debug_force_color(bool enabled);
 
