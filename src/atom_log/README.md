@@ -31,7 +31,6 @@ Install the amalgamated header from a [GitHub Release](https://github.com/pusewi
 | Define | Effect |
 |--------|--------|
 | `ATOM_LOG_IMPLEMENTATION` | Emit function bodies (once per program) |
-| `ATOM_LOG_SHORT_NAMES` | Also define `log_info` / `fatal` / … |
 | `ATOM_LOG_NO_COLOR` | Compile out ANSI color |
 | `ATOM_LOG_PATH_MARKER` | Path component promoted to relative (default `"src"`) |
 | `ATOM_LOG_STATIC` | Static linkage for single-TU embed |
