@@ -9,7 +9,7 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 ## Commands
 
 - `rake dist` / `rake dist:atom_log` — amalgamate headers into `dist/`
-- `rake test` / `rake test:atom_log` / `rake test:atom_log:sdl`
+- `rake test` / `rake test:atom_log` (needs SDL3)
 - `rake example:atom_log` — build and run examples
 - `rake docs` / `rake docs:serve` — local static site only (not run on PR CI)
 - `rake docs:check` — validate symbols/examples without building HTML
@@ -56,7 +56,7 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 - Banner: version, copyright, SPDX, tiny usage, DISCOVERY URLs (SHA-pinned),
   scannable optional defines — no long essays.
 - API docs: brief Doxygen on declarations in `public.h`.
-- Zero hard deps in core; optional backends behind feature defines.
+- Keep dependencies minimal; an atom may declare a hard dependency when its domain demands it (atom_log requires SDL3). Optional extras stay behind feature defines.
 - **C23, modern and strict:** `nullptr`, `constexpr`, typed enums (`enum E : int`),
   `[[noreturn]]` / `[[gnu::format]]`, `_Generic` / `typeof` when they clarify
   types. Prefer standard types (`int`, `size_t`, `bool`).
@@ -79,7 +79,7 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 
 - Framework: pico_unit (`third_party/pico_unit.h`).
 - Always test the amalgamated header (`rake test` ⇒ `dist` first).
-- Core suites must not require SDL or network.
+- Suites must not require network. atom_log's suite requires SDL3 (CI installs it on every job; declared via `Atoms::SDL_REQUIRED`).
 - Prefer fixing code over weakening assertions.
 - CI matrix: **ubuntu-26.04** (clang + gcc 15), macOS (clang), Windows (LLVM
   clang). SDL3 via [libsdl-org/setup-sdl](https://github.com/libsdl-org/setup-sdl)

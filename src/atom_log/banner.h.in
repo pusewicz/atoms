@@ -1,5 +1,5 @@
 /*
- * atom_log.h - v{{VERSION}} - Column-aligned leveled logging (C23)
+ * atom_log.h - v{{VERSION}} - Column-aligned leveled logging over SDL3 (C23)
  *
  * Copyright (c) 2026 Piotr Usewicz
  * SPDX-License-Identifier: Zlib
@@ -8,6 +8,7 @@
  * USAGE
  *   #define ATOM_LOG_IMPLEMENTATION
  *   #include "atom_log.h"
+ *   Requires SDL3: SDL3/SDL_log.h on the include path, link SDL3.
  *
  *   int main(void) {
  *     atom_log_init();
@@ -25,7 +26,6 @@
  *
  * OPTIONAL DEFINES (before include)
  *   ATOM_LOG_IMPLEMENTATION  — emit bodies in this TU (once)
- *   ATOM_LOG_SDL             — SDL3 backend + multi-module location packing
  *   ATOM_LOG_SHORT_NAMES     — also define log_info / fatal / …
  *   ATOM_LOG_NO_COLOR        — strip ANSI support
  *   ATOM_LOG_PATH_MARKER     — path component promoted to relative (default "src")
