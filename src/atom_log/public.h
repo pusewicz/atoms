@@ -133,19 +133,6 @@ atom_log_fatal(const char* file, int line, const char* format, ...);
 /** @brief Abort with a formatted error at the call site. */
 #define atom_fatal(...) atom_log_fatal(__FILE__, __LINE__, __VA_ARGS__)
 
-#ifdef ATOM_LOG_SHORT_NAMES
-#ifndef log_trace
-#define log_trace(...) atom_log_trace(__VA_ARGS__)
-#define log_debug(...) atom_log_debug(__VA_ARGS__)
-#define log_info(...) atom_log_info(__VA_ARGS__)
-#define log_warn(...) atom_log_warn(__VA_ARGS__)
-#define log_error(...) atom_log_error(__VA_ARGS__)
-#define fatal(...) atom_fatal(__VA_ARGS__)
-#define log_message atom_log_message
-#define logger_init atom_log_init
-#endif
-#endif
-
 #ifdef __cplusplus
 }
 #endif

@@ -23,6 +23,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - Non-SDL stderr backend, the `rake test:atom_log:sdl` split suite, and the
   separate SDL example (`hello_sdl.c` merged into `hello.c`).
+- **Breaking:** `ATOM_LOG_SHORT_NAMES` and the unprefixed aliases it defined
+  (`log_trace`, `log_debug`, `log_info`, `log_warn`, `log_error`, `fatal`,
+  `log_message`, `logger_init`). Use the `atom_log_*` / `atom_fatal` names
+  directly.
 
 ## [0.1.1] - 2026-07-18
 ### Added

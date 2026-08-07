@@ -26,7 +26,6 @@
  *
  * OPTIONAL DEFINES (before include)
  *   ATOM_LOG_IMPLEMENTATION  — emit bodies in this TU (once)
- *   ATOM_LOG_SHORT_NAMES     — also define log_info / fatal / …
  *   ATOM_LOG_NO_COLOR        — strip ANSI support
  *   ATOM_LOG_PATH_MARKER     — path component promoted to relative (default "src")
  *   ATOM_LOG_STATIC          — static linkage for single-TU embed
