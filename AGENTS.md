@@ -19,6 +19,7 @@ lives under `src/<lib>/`. Amalgamated headers are build products in `dist/`
 - `rake release:atom_log` — promote changelog (VERSION unchanged)
 - `rake release:atom_log:bump_next` — VERSION += patch after tagging
 - `rake asan` — sanitizer build + tests
+- `rake compile_commands` — clang compile database at repo root (builds tests + examples)
 - `rake format` / `rake format:check` — clang-format
 - `rake tidy` — clang-tidy over core test TUs
 - `rake clean` / `rake clobber`

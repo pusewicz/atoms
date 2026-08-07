@@ -27,7 +27,10 @@ def compile_and_link(src, bin, extra_cflags: [], extra_ldflags: [], cflags: CFLA
   # Include test dir for host_compat.h (and future shared test headers).
   test_inc = ["-I#{src.dirname}"]
   obj = Atoms::BUILD.join("#{bin.basename(exe_suffix)}.o")
-  sh CC, *cflags, *test_inc, *extra_cflags, "-c", src.to_s, "-o", obj.to_s
+  # -MJ (clang-only) captures a compile_commands.json entry per TU,
+  # aggregated by rake compile_commands.
+  mj = Atoms::CFlags.clangish? ? ["-MJ", "#{obj}.json"] : []
+  sh CC, *cflags, *test_inc, *extra_cflags, *mj, "-c", src.to_s, "-o", obj.to_s
   sh CC, *cflags, obj.to_s, "-o", bin.to_s, *LDFLAGS, *extra_ldflags
 end
 
