@@ -11,6 +11,9 @@ module Atoms
   DOCS_OUT = BUILD.join("docs")
   GITHUB = "https://github.com/pusewicz/atoms"
 
+  # Atoms with a hard SDL3 dependency (tests, examples, and tidy link SDL3).
+  SDL_REQUIRED = %w[atom_log].freeze
+
   module_function
 
   def libs
@@ -19,6 +22,10 @@ module Atoms
 
   def lib_dir(name)
     SRC.join(name)
+  end
+
+  def requires_sdl?(name)
+    SDL_REQUIRED.include?(name)
   end
 
   def version(name)

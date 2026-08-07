@@ -22,6 +22,19 @@ def sdl_available?
   Atoms::Sdl.available?
 end
 
+def sdl_build_flags!(name)
+  return [[], []] unless Atoms.requires_sdl?(name)
+
+  unless sdl_available?
+    abort "SDL3 not found (pkg-config sdl3, or set SDL3_DIR / VCPKG_ROOT)"
+  end
+
+  cfg = Atoms::Sdl.config
+  puts "SDL3 via #{cfg.source}"
+  Atoms::Sdl.prepend_bin_to_path!
+  [cfg.cflags, cfg.libs]
+end
+
 def compile_and_link(src, bin, extra_cflags: [], extra_ldflags: [], cflags: CFLAGS)
   Atoms::BUILD.mkpath
   # Include test dir for host_compat.h (and future shared test headers).
@@ -43,11 +56,13 @@ namespace :test do
     core_tests = Atoms.lib_dir(name).glob("tests/test_#{name}.c")
     sdl_tests = Atoms.lib_dir(name).glob("tests/test_#{name}_sdl.c")
 
-    desc "Run core tests for #{name}"
+    desc "Run tests for #{name}#{' (requires SDL3)' if Atoms.requires_sdl?(name)}"
     task name => "dist:#{name}" do
+      extra_cflags, extra_ldflags = sdl_build_flags!(name)
       core_tests.each do |src|
         bin = Atoms::BUILD.join("#{src.basename('.c')}#{exe_suffix}")
-        compile_and_link(src, bin)
+        compile_and_link(src, bin, extra_cflags: extra_cflags,
+                                   extra_ldflags: extra_ldflags)
         run_bin(bin)
       end
     end
@@ -105,9 +120,12 @@ task :asan do
                  %w[-fsanitize=address,undefined]
   Atoms.libs.each do |name|
     Rake::Task["dist:#{name}"].invoke
+    extra_cflags, extra_ldflags = sdl_build_flags!(name)
     Atoms.lib_dir(name).glob("tests/test_#{name}.c").each do |src|
       bin = Atoms::BUILD.join("asan_#{src.basename('.c')}#{exe_suffix}")
-      compile_and_link(src, bin, cflags: asan_cflags, extra_ldflags: asan_ldflags)
+      compile_and_link(src, bin, cflags: asan_cflags,
+                                 extra_cflags: extra_cflags,
+                                 extra_ldflags: asan_ldflags + extra_ldflags)
       run_bin(bin)
     end
   end
@@ -115,30 +133,13 @@ end
 
 namespace :example do
   Atoms.libs.each do |name|
-    desc "Build and run examples for #{name} (SDL examples need SDL3)"
+    desc "Build and run examples for #{name}#{' (requires SDL3)' if Atoms.requires_sdl?(name)}"
     task name => "dist:#{name}" do
+      extra_cflags, extra_ldflags = sdl_build_flags!(name)
       Atoms.lib_dir(name).glob("examples/*.c").sort.each do |src|
         bin = Atoms::BUILD.join("example_#{name}_#{src.basename('.c')}#{exe_suffix}")
-        sdl_example = src.basename(".*").to_s.end_with?("_sdl")
-
-        if sdl_example
-          unless sdl_available?
-            warn "skip example #{src.basename} (SDL3 not available)"
-            next
-          end
-
-          cfg = Atoms::Sdl.config
-          puts "SDL3 via #{cfg.source} (#{src.basename})"
-          Atoms::Sdl.prepend_bin_to_path!
-          compile_and_link(
-            src,
-            bin,
-            extra_cflags: ["-DATOM_LOG_SDL", *cfg.cflags],
-            extra_ldflags: cfg.libs
-          )
-        else
-          compile_and_link(src, bin)
-        end
+        compile_and_link(src, bin, extra_cflags: extra_cflags,
+                                   extra_ldflags: extra_ldflags)
         run_bin(bin)
       end
     end
