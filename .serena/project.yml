@@ -72,7 +72,9 @@ ls_additional_workspace_folders: []
 #     - "**/bin/**"
 #     - "**/obj/**"
 # Note: global ignored_paths from serena_config.yml are also applied additively.
-ignored_paths: []
+ignored_paths:
+- "third_party/**"
+- ".worktrees/**"
 
 # whether the project is in read-only mode
 # If set to true, all editing tools will be disabled and attempts to use them will result in an error
@@ -111,7 +113,7 @@ added_modes:
 
 # initial prompt for the project. It will always be given to the LLM upon activating the project
 # (contrary to the memories, which are loaded on demand).
-initial_prompt: ""
+initial_prompt: "STB-style single-header C23 libraries. Read AGENTS.md before changing anything: edit src/<lib>/ only (never dist/ or build/), strict C23 under -std=c23 -Wall -Wextra -Wpedantic -Werror, Rake owns dist/tests/docs/release (no CMake), and every user-visible change adds a CHANGELOG.md [Unreleased] bullet in the same change."
 
 # time budget (seconds) per tool call for the retrieval of additional symbol information
 # such as docstrings or parameter information.
