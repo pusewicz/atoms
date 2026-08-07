@@ -54,7 +54,6 @@ end
 namespace :test do
   Atoms.libs.each do |name|
     core_tests = Atoms.lib_dir(name).glob("tests/test_#{name}.c")
-    sdl_tests = Atoms.lib_dir(name).glob("tests/test_#{name}_sdl.c")
 
     desc "Run tests for #{name}#{' (requires SDL3)' if Atoms.requires_sdl?(name)}"
     task name => "dist:#{name}" do
@@ -63,30 +62,6 @@ namespace :test do
         bin = Atoms::BUILD.join("#{src.basename('.c')}#{exe_suffix}")
         compile_and_link(src, bin, extra_cflags: extra_cflags,
                                    extra_ldflags: extra_ldflags)
-        run_bin(bin)
-      end
-    end
-
-    next if sdl_tests.empty?
-
-    desc "Run SDL tests for #{name} (requires SDL3)"
-    task "#{name}:sdl" => "dist:#{name}" do
-      unless sdl_available?
-        abort "SDL3 not found (pkg-config sdl3, or set SDL3_DIR / VCPKG_ROOT)"
-      end
-
-      cfg = Atoms::Sdl.config
-      puts "SDL3 via #{cfg.source}"
-      Atoms::Sdl.prepend_bin_to_path!
-
-      sdl_tests.each do |src|
-        bin = Atoms::BUILD.join("#{src.basename('.c')}#{exe_suffix}")
-        compile_and_link(
-          src,
-          bin,
-          extra_cflags: ["-DATOM_LOG_SDL", *cfg.cflags],
-          extra_ldflags: cfg.libs
-        )
         run_bin(bin)
       end
     end
@@ -99,17 +74,11 @@ task :test do
   if Atoms::Sdl.available?
     puts "SDL3: #{Atoms::Sdl.config.source}"
   else
-    puts "SDL3: not found (SDL suite will be skipped)"
+    puts "SDL3: not found (required by: #{Atoms::SDL_REQUIRED.join(', ')})"
   end
 
   Atoms.libs.each do |name|
     Rake::Task["test:#{name}"].invoke
-    sdl_task = "test:#{name}:sdl"
-    if Rake::Task.task_defined?(sdl_task) && sdl_available?
-      Rake::Task[sdl_task].invoke
-    elsif Rake::Task.task_defined?(sdl_task)
-      warn "skip #{sdl_task} (SDL3 not available)"
-    end
   end
 end
 
