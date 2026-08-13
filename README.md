@@ -8,11 +8,18 @@ Single-header C23 libraries ("atoms") — small, drop-in, STB-style.
 
 ## Install
 
-**From a GitHub Release** (recommended):
+**Latest release** (recommended — `dist/` always holds the latest released headers):
 
 ```bash
 curl -fsSL -o atom_log.h \
-  https://github.com/pusewicz/atoms/releases/download/atom_log-v0.1.0/atom_log.h
+  https://raw.githubusercontent.com/pusewicz/atoms/main/dist/atom_log.h
+```
+
+**Pin a version** via a [GitHub Release](https://github.com/pusewicz/atoms/releases) asset:
+
+```bash
+curl -fsSL -o atom_log.h \
+  https://github.com/pusewicz/atoms/releases/download/atom_log-v0.1.1/atom_log.h
 ```
 
 **From source** (needs Ruby/Rake and a C23 compiler):
@@ -20,7 +27,7 @@ curl -fsSL -o atom_log.h \
 ```bash
 git clone https://github.com/pusewicz/atoms.git
 cd atoms
-rake dist          # → dist/atom_log.h
+rake amalgamate    # → build/amalgam/atom_log.h
 ```
 
 ## Use

@@ -56,7 +56,7 @@ namespace :test do
     core_tests = Atoms.lib_dir(name).glob("tests/test_#{name}.c")
 
     desc "Run tests for #{name}#{' (requires SDL3)' if Atoms.requires_sdl?(name)}"
-    task name => "dist:#{name}" do
+    task name => "amalgamate:#{name}" do
       extra_cflags, extra_ldflags = sdl_build_flags!(name)
       core_tests.each do |src|
         bin = Atoms::BUILD.join("#{src.basename('.c')}#{exe_suffix}")
@@ -68,7 +68,7 @@ namespace :test do
   end
 end
 
-desc "Build dist and run all available test suites"
+desc "Amalgamate and run all available test suites"
 task :test do
   puts "CC=#{CC}  clangish=#{Atoms::CFlags.clangish?}  host=#{RbConfig::CONFIG['host_os']}"
   if Atoms::Sdl.available?
@@ -88,7 +88,7 @@ task :asan do
   asan_ldflags = Shellwords.split(ENV.fetch("LDFLAGS", "")) +
                  %w[-fsanitize=address,undefined]
   Atoms.libs.each do |name|
-    Rake::Task["dist:#{name}"].invoke
+    Rake::Task["amalgamate:#{name}"].invoke
     extra_cflags, extra_ldflags = sdl_build_flags!(name)
     Atoms.lib_dir(name).glob("tests/test_#{name}.c").each do |src|
       bin = Atoms::BUILD.join("asan_#{src.basename('.c')}#{exe_suffix}")
@@ -103,7 +103,7 @@ end
 namespace :example do
   Atoms.libs.each do |name|
     desc "Build and run examples for #{name}#{' (requires SDL3)' if Atoms.requires_sdl?(name)}"
-    task name => "dist:#{name}" do
+    task name => "amalgamate:#{name}" do
       extra_cflags, extra_ldflags = sdl_build_flags!(name)
       Atoms.lib_dir(name).glob("examples/*.c").sort.each do |src|
         bin = Atoms::BUILD.join("example_#{name}_#{src.basename('.c')}#{exe_suffix}")

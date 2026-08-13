@@ -2,18 +2,20 @@
 
 require_relative "atoms"
 require_relative "changelog"
+require_relative "amalgamate"
 
 namespace :release do
   Atoms.libs.each do |name|
     desc "Cut release for #{name}: promote [Unreleased] → ## [VERSION] (VERSION unchanged)"
     task name do
       v = Atoms::Changelog.promote!(name)
-      Rake::Task["dist:#{name}"].invoke
+      Atoms::Amalgamate.build(name, out_dir: Atoms::DIST)
       tag = "#{name}-v#{v}"
       puts
       puts "Release #{name} v#{v} prepared."
       puts "  1. Review CHANGELOG.md and dist/#{name}.h"
-      puts "  2. git add -A && git commit -m 'Release #{name} v#{v}'"
+      puts "  2. git add src/#{name}/CHANGELOG.md src/#{name}/VERSION dist/#{name}.h && " \
+           "git commit -m 'Release #{name} v#{v}'"
       puts "  3. git tag -a #{tag} -m '#{name} v#{v}'"
       puts "  4. git push && git push origin #{tag}"
       puts "  5. rake release:#{name}:bump_next"

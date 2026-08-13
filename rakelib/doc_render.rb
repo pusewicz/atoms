@@ -48,7 +48,7 @@ module Atoms
           license_text: license_text,
           source_url: "#{Atoms::GITHUB}/tree/#{sha}/src/#{name}",
           github_examples_url: "#{Atoms::GITHUB}/tree/#{sha}/src/#{name}/examples",
-          download_url: "#{Atoms::GITHUB}/releases/download/#{name}-v#{Atoms.version(name)}/#{name}.h",
+          download_url: "#{Atoms::RAW}/main/dist/#{name}.h",
           public_url: "#{Atoms::GITHUB}/blob/#{sha}/src/#{name}/public.h"
         }
       end
@@ -311,8 +311,8 @@ module Atoms
       content << %(<pre class="highlight"><code class="language-shell">)
       content << h("rake example:#{lib[:name]}")
       content << %(</code></pre>\n)
-      content << %(<p class="muted">Or compile against <code>dist/#{h(lib[:name])}.h</code> after )
-      content << %(<code>rake dist:#{h(lib[:name])}</code>.</p>\n)
+      content << %(<p class="muted">Or compile against <code>build/amalgam/#{h(lib[:name])}.h</code> after )
+      content << %(<code>rake amalgamate:#{h(lib[:name])}</code>.</p>\n)
 
       body = +%(<div class="page examples-page">\n)
       body << examples_sidebar(lib, active_stem: ex[:stem])

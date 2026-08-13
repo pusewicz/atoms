@@ -18,7 +18,8 @@ Trigger: tag push matching `<lib>-v*` (e.g. `atom_log-v0.1.0`) runs
 `.github/workflows/release.yml`, which:
 
 1. Asserts the tag version equals `src/<lib>/VERSION`
-2. Builds `dist/<lib>.h` and attaches it to a **GitHub Release**
+2. Rebuilds the header and **verifies it matches the committed `dist/<lib>.h`**,
+   then attaches the committed file to a **GitHub Release**
 3. Calls `docs.yml` to build and deploy **GitHub Pages**
 
 Docs can also be redeployed without a release via **Actions → Docs → Run
@@ -104,25 +105,23 @@ Do **not** proceed without explicit yes.
 bundle exec rake "release:${LIB}"
 ```
 
-This promotes `[Unreleased]` → `## [V] - YYYY-MM-DD` and runs `dist:${LIB}`.
-`VERSION` stays `V`.
+This promotes `[Unreleased]` → `## [V] - YYYY-MM-DD` and regenerates
+`dist/${LIB}.h` with the release version (a committed file — this change is
+intentional and belongs in the release commit). `VERSION` stays `V`.
 
 If rake fails (empty Unreleased, duplicate section, etc.), stop and report.
 
 ## 5. Commit release
 
 ```bash
-git add "src/${LIB}/CHANGELOG.md" "src/${LIB}/VERSION" dist/   # dist is gitignored; omit if clean
+git add "src/${LIB}/CHANGELOG.md" "src/${LIB}/VERSION" "dist/${LIB}.h"
 git status
-# Prefer only changelog (and VERSION if bumped earlier):
-git add "src/${LIB}/CHANGELOG.md"
-# If version was bumped in step 2 and not yet committed:
-git add "src/${LIB}/VERSION"
 git commit -m "Release ${LIB} v${V}"
 ```
 
-Do not commit `dist/` or `build/` (gitignored). Do not amend unless the user
-explicitly asks and HEAD was created by you and not pushed.
+The release commit MUST include `dist/${LIB}.h`. Do not commit `build/`
+(gitignored). Do not amend unless the user explicitly asks and HEAD was
+created by you and not pushed.
 
 ## 6. Tag and push (triggers CI)
 
@@ -160,12 +159,17 @@ git push origin main
 - Release URL (assets: `LIB.h`)
 - Docs deploy (Pages) when the release workflow’s docs job finishes
 - New in-progress VERSION after `bump_next`
-- Remind: consumers install via
+- Remind: consumers install the latest via
+  `https://raw.githubusercontent.com/pusewicz/atoms/main/dist/LIB.h`
+  or pin a version via
   `https://github.com/pusewicz/atoms/releases/download/LIB-vV/LIB.h`
 
 ## Hard rules
 
 - **Never** push a tag whose version ≠ `src/${LIB}/VERSION` at that commit.
+- **Never** commit `dist/<lib>.h` outside a release commit, and **never**
+  hand-edit it — it is only written by `rake release:<lib>`. The release
+  workflow diffs it against a fresh build and fails the release on mismatch.
 - **Never** force-push tags or rewrite published release commits.
 - **Never** release from a dirty tree or a branch other than `main` unless the
   user explicitly overrides after you warn them.

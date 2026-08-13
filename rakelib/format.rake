@@ -22,8 +22,8 @@ namespace :format do
   end
 end
 
-desc "clang-tidy first-party test TUs (after dist)"
-task tidy: :dist do
+desc "clang-tidy first-party test TUs (after amalgamate)"
+task tidy: :amalgamate do
   abort "clang-tidy not found" unless system("command -v clang-tidy",
                                              out: File::NULL, err: File::NULL)
   Atoms.libs.each do |name|
